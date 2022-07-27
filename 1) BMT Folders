@@ -1,0 +1,138 @@
+---
+title: "BEMTool data preparation"
+author: "Andrea Pierucci and Isabella Bitetto"
+date: '2022-03-25'
+output:
+  #bookdown::pdf_book:
+  pdf_document: default
+  #html_document: default
+header-includes:
+    - \usepackage{ragged2e}
+    - \usepackage{multirow}
+    - \usepackage{setspace}\doublespacing
+---
+\begin{singlespace}
+
+BEMTool needs at least the following files in C:
+  
+\begin{enumerate}
+     \item PREPARATION INPUT (folders)
+         \begin{enumerate}
+             \item ALADYM (folders)
+                  \begin{enumerate}
+                        \item SPECIES-1 (folder)
+                              \begin{enumerate}
+                                  \item aladym-Species-1.csv
+                                  \item M.csv
+                                  \item Recruitment.csv
+                                  \item Selectivity.csv
+                                  \item Z.csv
+                                  \item Discard-Reverse-Ogive.csv
+                                  \item Discard.csv
+                                  \item Aladym-landings-obligations.csv
+                              \end{enumerate}
+                        \item SPECIES-2 (folder)\\
+                        note: same type of files of SPECIES-1
+                        \item SPECIES-3 (folder)\\
+                         note: same type of files of SPECIES-1 and 2
+                  \end{enumerate}     
+             \item EFFORT (folders)
+                  \begin{enumerate}
+                        \item average-GT.csv
+                        \item average-kw.csv
+                        \item number-of-vessels.csv
+                        \item days-at-sea.csv
+                  \end{enumerate}
+             \item LANDINGS (folders)
+                  \begin{enumerate}
+                        \item landings-Species-1.csv
+                        \item landings-Species-2.csv
+                        \item landings-Species-3.csv
+                  \end{enumerate}
+             \item SCENARIOS (folders)
+                  \begin{enumerate}
+                        \item SCENARIO-1
+                            \begin{enumerate}
+                               \item grid-Eq-sim-Species-1.csv
+                               \item grid-Eq-sim-Species-2.csv
+                               \item grid-Eq-sim-Species-3.csv
+                               \item monthly-data-sea-days.csv
+                               \item vessels.csv
+                               \item bmt-config-Forecast.csv
+                            \end{enumerate}
+                        \item SCENARIO-2\\
+                            note: same type of files of SCENARIO-1
+                  \end{enumerate}
+             \item bmt-config-Simulation.csv (unique file)
+             \item Economic-Time-Series.csv
+         \end{enumerate}
+     \item INPUT (folders)
+\end{enumerate}
+
+\end{singlespace}
+```
+
+```{r}
+ts<-c(2004:2020)
+#spe="A_ANT"
+
+
+library(tidyverse)
+library(data.table)
+
+
+#please define your species
+SPECIES_1<-"A_ANT"
+SPECIES_2<-"A_FOL"
+SPECIES_3<-"M_BAR9"
+SPECIES_4<-"M_BAR10"
+SPECIES_5<-"M_MER"
+SPECIES_6<-"N_NOR"
+SPECIES_7<-"P_LOG"
+
+#please define your scenarios
+
+SCENARIO_1<-"SQ"
+SCENARIO_2<-"TAC_ARA"
+SCENARIO_3<-"TAC_ARA_MONTLY"
+SCENARIO_4<-"TAC_ARA_REV"
+SCENARIO_5<-"TAC_ARA_REV_MONTLY"
+SCENARIO_6<-"TAC_ARS"
+SCENARIO_7<-"TAC_ARS_MONTLY"
+SCENARIO_8<-"TAC_ARS_REV"
+SCENARIO_9<-"TAC_ARS_REV_MONTLY"
+
+
+# Please, create your folders needed
+dir="C:"
+dir.create(file.path(dir,"INPUT"), recursive = T)
+(dir1=paste("C:/INPUT"))
+dir.create(file.path(dir1,"ALADYM"), recursive = T)
+    (dir2=paste("C:/INPUT/ALADYM"))
+          #please add the same amount of folders as for the number of species previously defined
+          dir.create(file.path(dir2,SPECIES_1), recursive = T)
+          dir.create(file.path(dir2,SPECIES_2), recursive = T)
+          dir.create(file.path(dir2,SPECIES_3), recursive = T)
+          dir.create(file.path(dir2,SPECIES_4), recursive = T)
+          dir.create(file.path(dir2,SPECIES_5), recursive = T)
+          dir.create(file.path(dir2,SPECIES_6), recursive = T)
+          dir.create(file.path(dir2,SPECIES_7), recursive = T)
+
+dir.create(file.path(dir1,"EFFORT"), recursive = T)
+dir.create(file.path(dir1,"LANDINGS"), recursive = T)
+dir.create(file.path(dir1,"SCENARIOS"), recursive = T)
+    (dir3=paste("C:/INPUT/SCENARIOS"))
+          #please add the same amount of folders as for the number of scenarios previously defined
+          dir.create(file.path(dir3,SCENARIO_1), recursive = T)
+          dir.create(file.path(dir3,SCENARIO_2), recursive = T)
+          dir.create(file.path(dir3,SCENARIO_3), recursive = T)
+          dir.create(file.path(dir3,SCENARIO_4), recursive = T)
+          dir.create(file.path(dir3,SCENARIO_5), recursive = T)
+          dir.create(file.path(dir3,SCENARIO_6), recursive = T)
+          dir.create(file.path(dir3,SCENARIO_7), recursive = T)
+          dir.create(file.path(dir3,SCENARIO_8), recursive = T)
+          dir.create(file.path(dir3,SCENARIO_9), recursive = T)
+ 
+dir.create(file.path(dir,"OUTPUT"), recursive = T)
+(dir4=paste("C:/OUTPUT"))       
+```
