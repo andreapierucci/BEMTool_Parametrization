@@ -1,0 +1,60 @@
+```{r}
+# We will start the construction of all the csv file we need for BMT with Natural Mortality (M)
+# some easy code below 
+
+(age<-c("age","0","1", "2", "3")) # add here the correct number of ages
+(natM<-c("nat",1.75,	0.938,	0.748,	0.673))
+(M_file<-matrix(natM, 1, 5))
+(M_file<-as.data.frame(M_file))
+(colnames(M_file)<-age) 
+
+tr=2  # in months, tr is the age of recruitment to the fishing ground 
+lifespan=4 # Life span equal to n of ages
+(age_month=seq(tr,lifespan*12,1))
+(M=age_month)
+
+for (r in 1:(length(age_month)-1)){
+  age=trunc(age_month[r]/12,0)
+  M[r]=M_file[1,age+2]
+}
+
+(M[length(age_month)]=M[length(age_month)-1])
+(DF_M=data.frame(age_month=age_month,	M=M))
+
+# please add your direcotry of INPUT file and save it as csv.
+# write.table(DF_M,paste(dir2,"/",SPECIES_5,"/M.csv",sep=""),sep=";",row.names=F)  
+```
+
+
+```{r}
+# Please, add you recruitment from the last stock assessment available with all the time series. 
+
+ts<-c(2004:2020)
+(year<-c(2004:2020))
+
+(R<-c(2026625,
+1975589,
+1833002,
+1703895,
+1619353,
+1541422,
+1438376,
+1346085,
+1348740,
+1529795,
+1947296,
+2575489,
+3221716,
+3623722,
+3708076,
+3608000,
+3459810)) 
+
+(Rec_file<-data.frame(year,R))
+(Rec=Rec_file[Rec_file[,1] %in% ts,])
+(DF_R=data.frame(year=ts,	seed= c(Rec[1,2],rep("",(length(ts)-1))),	Jan=Rec[,2],	Feb=Rec[,2],	Mar=Rec[,2],	Apr=Rec[,2],	May=Rec[,2],	Jun=Rec[,2],	Jul=Rec[,2],	Aug=Rec[,2],	Sep=Rec[,2],	Oct=Rec[,2],	Nov=Rec[,2],	Dec=Rec[,2]))
+
+# Please add your direcotry of INPUT file and save it as csv.
+# write.table(DF_R,paste(dir2,"/",SPECIES_1,"/Recruitment.csv",sep=""),sep=";",row.names=F)  
+```
+
