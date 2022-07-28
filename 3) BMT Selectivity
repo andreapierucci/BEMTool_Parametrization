@@ -1,0 +1,201 @@
+```{r}
+
+# Below there are an example of selectivity.csv creation with three GSAs and 36 fleet segments. 
+# Please add you fleet segments with the correct lables that you will use until the end of the all BMT scripts. 
+
+(Fleet_segments <-c("GSA9_DTS_VL0612_OTB_DEF",
+                   "GSA9_DTS_VL1218_OTB_DEF",
+                   "GSA9_DTS_VL1218_OTB_DWS",
+                   "GSA9_DTS_VL1218_OTB_MDD",
+                   "GSA9_DTS_VL1824_OTB_DEF",
+                   "GSA9_DTS_VL1824_OTB_DWS",
+                   "GSA9_DTS_VL1824_OTB_MDD",
+                   "GSA9_DTS_VL2440_OTB_DEF",
+                   "GSA9_DTS_VL2440_OTB_MDD",
+                   "GSA9_PGP_VL0012",
+                   "GSA9_PGP_VL1218",
+                   
+                   "GSA10_DTS_VL0612_OTB_DEF",
+                   "GSA10_DTS_VL1218_OTB_DEF",
+                   "GSA10_DTS_VL1218_OTB_DWS",
+                   "GSA10_DTS_VL1218_OTB_MDD",
+                   "GSA10_DTS_VL1824_OTB_DEF",
+                   "GSA10_DTS_VL1824_OTB_DWS",
+                   "GSA10_DTS_VL1824_OTB_MDD",
+                   "GSA10_DTS_VL2440_OTB_DEF",
+                   "GSA10_DTS_VL2440_OTB_DWS",
+                   "GSA10_DTS_VL2440_OTB_MDD",
+                   "GSA10_PGP_VL0006",
+                   "GSA10_PGP_VL0612",
+                   "GSA10_PGP_VL1218",
+                   
+                   "GSA11_DTS_VL0612_OTB_DEF",
+                   "GSA11_DTS_VL1218_OTB_DEF",
+                   "GSA11_DTS_VL1218_OTB_DWS",
+                   "GSA11_DTS_VL1218_OTB_MDD",
+                   "GSA11_DTS_VL1824_OTB_DEF",
+                   "GSA11_DTS_VL1824_OTB_DWS",
+                   "GSA11_DTS_VL1824_OTB_MDD",
+                   "GSA11_DTS_VL2440_OTB_DEF",
+                   "GSA11_DTS_VL2440_OTB_DWS",
+                   "GSA11_DTS_VL2440_OTB_MDD",
+                   "GSA11_PGP_VL0012",
+                   "GSA11_PGP_VL1218"))
+
+
+(Months=c("Jan",
+         "Feb",
+         "Mar",
+         "Apr",
+         "May",
+         "Jun",
+         "Jul",
+         "Aug",
+         "Set",
+         "Oct",
+         "Nov",
+         "Dec"))
+
+
+
+(month_vec=c("seed",rep(c(Months),length(ts))))
+(month_vec=rep(month_vec,length(Fleet_segments)))
+(y=1)
+(year_vec=c("",rep(ts[y],12)))
+
+for (y in 2:length(ts)){
+year_vec2=c(year_vec,rep(ts[y],12))
+year_vec=year_vec2
+}
+(year_vec=rep(year_vec,length(Fleet_segments)))
+
+# Selectivity models:
+# 1 classical ogive, 2 ogive with de-selection, 3 gaussian symmetric, 4 log-normal, 5 bi-normal, 6 norma asymmetric
+
+# Please add your selected model for each fleet segment
+# in rep(2,36), 36 is the amount of fleet segments of our example. Please add the correct amount of your fleet segments.
+nFS<-36 # please change 36 with your amount of FS
+models= rep(2,nFS)
+param1=c(160,	
+         180,	
+         160,	
+         180,	
+         160,	
+         160,	
+         180,	
+         160,	
+         160,	
+         180,	
+         160,	
+         160,	
+         180,	
+         160,	
+         180,	
+         160, 
+         270, 
+         270,
+         160,	
+         180,	
+         160,
+         180,
+         160,
+         160,
+         180,
+         160,	
+         160,	
+         180,	
+         160,	
+         160,	
+         180,	
+         160,	
+         180,	
+         160, 
+         270, 
+         270)
+
+param2=rep(20,nFS)
+
+param3=c(330,	
+         270,	
+         330,	
+         270,	
+         290,	
+         330,	
+         270,	
+         290,	
+         330,	
+         270,	
+         290,	
+         330,	
+         270,	
+         330,	
+         270,	
+         290, 
+         370, 
+         370,
+         160,	
+         180,	
+         160,
+         180,
+         160,	
+         160,	
+         180,
+         160,	
+         160,	
+         180,	
+         160,	
+         160,	
+         180,	
+         160,	
+         180,	
+         160, 
+         270, 
+         270)
+param4=rep(NA,nFS)
+param5=rep(NA,nFS)
+param6=rep(NA,nFS)
+
+(x=length(ts)*12+1)
+param1_vec=rep(param1[1],x)
+for (fs in 2:length(Fleet_segments)){
+param1_vec2= c(param1_vec,rep(param1[fs],x) )
+param1_vec=  param1_vec2
+}
+param2_vec=rep(param2[1],x)
+for (fs in 2:length(Fleet_segments)){
+  param2_vec2= c(param2_vec,rep(param2[fs],x) )
+  param2_vec=  param2_vec2
+}
+param3_vec=rep(param3[1],x)
+for (fs in 2:length(Fleet_segments)){
+  param3_vec2= c(param3_vec,rep(param3[fs],x) )
+  param3_vec=  param3_vec2
+}
+param4_vec=rep(param4[1],x)
+for (fs in 2:length(Fleet_segments)){
+  param4_vec2= c(param4_vec,rep(param4[fs],x) )
+  param4_vec=  param4_vec2
+}
+param5_vec=rep(param5[1],x)
+for (fs in 2:length(Fleet_segments)){
+  param5_vec2= c(param5_vec,rep(param5[fs],x) )
+  param5_vec=  param5_vec2
+}
+
+sel_type_vec=rep(models[1],x)
+for (fs in 2:length(Fleet_segments)){
+  sel_type_vec2= c(sel_type_vec,rep(models[fs],x) )
+  sel_type_vec=  sel_type_vec2
+}
+
+fleet_segment_vec=rep(Fleet_segments[1],x)
+for (fs in 2:length(Fleet_segments)){
+  fleet_segment_vec2= c(fleet_segment_vec,rep(Fleet_segments[fs],x) )
+  fleet_segment_vec=  fleet_segment_vec2
+}
+
+(DF=data.frame(year=year_vec,	month=month_vec,	param1=param1_vec,	param2=param2_vec,	param3=param3_vec,	param4=param4_vec,	param5=param5_vec,	sel_type=sel_type_vec,	fleet_segment=fleet_segment_vec))
+
+# Please, add your directories and save the file in csv format. 
+# write.table(DF,.........Selectivity.csv",sep=";",row.names=F) 
+```
