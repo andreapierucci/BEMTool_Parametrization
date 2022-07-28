@@ -1,0 +1,55 @@
+```{r}
+
+# insert discards, L50 and L75_L25 the same time of the fleet segment amount.
+nFS<-36 # Please chenge this with the amount of your fleet segments 
+(discard = c(rep("YES",nFS)))
+(L50=c(rep(90,nFS)))
+(L75_L25=c(rep(20,nFS)))
+
+x<-12*length(Fleet_segments)*length(ts)
+
+(discard_vec=(rep(discard[1],x+nFS))) 
+
+# for (fs in 2:length(Fleet_segments)){
+#   discard_vec_vec2=c(discard_vec,rep(discard[fs],x) )
+#   discard_vec_vec=discard_vec_vec2
+# }
+
+(L50_vec=rep(L50[1],x+nFS))
+
+# for (fs in 2:length(Fleet_segments)){
+#   L50_vec2= c(L50_vec,rep(param1[fs],x) )
+#   L50_vec=  L50_vec2
+# }
+
+(L75_L25_vec=rep(L75_L25[1],x+nFS))
+
+# for (fs in 2:length(Fleet_segments)){
+#   L75_L25_vec2= c(L75_L25_vec,rep(L75_L25[fs],x) )
+#   L75_L25_vec=  L75_L25_vec2
+# }
+
+(DF=data.frame(year=year_vec,	
+               month=month_vec,	
+               L50=L50_vec,	
+               L75_L25=L75_L25_vec,	
+               discard=discard_vec,	
+               fleet_segment=fleet_segment_vec))
+
+# Please, add your directories and save the file in csv format
+# write.table(DF,....Discard_reverse_ogive.csv",sep=";",row.names=F)  
+
+(month_vec=c(rep(c(Months),length(ts))))
+(month_vec_obb=rep(month_vec,length(Fleet_segments)))
+(year_vec=rep(ts,each=12))
+(year_vec_obb=rep(year_vec,length(Fleet_segments)))
+(landing_obligation<-rep("N",length(year_vec_obb)))
+(fleet_segments<-rep(Fleet_segments, each=length(ts)*12))
+(df<-data.frame(year_vec_obb,
+                month_vec_obb,
+                landing_obligation,
+                fleet_segments))
+                
+# Please, add your directory and save the file in a csv format.
+# write.table(df,...../ALADYM_landing_obligation.csv",sep=";",row.names=F)  
+```
