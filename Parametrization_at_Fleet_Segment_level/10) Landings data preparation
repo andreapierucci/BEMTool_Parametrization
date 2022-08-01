@@ -1,0 +1,99 @@
+```{r}
+# Packages needed 
+
+library(tidyverse)
+library(readxl)
+library(tidyr)
+
+# Below we present how to prepare the data frame of landing. 
+# You need to prepare a data frame with all real data for all species.
+# After you need to create a fake data base with all the species, GSAs, Years, and LOA.
+# Finally you will use these two DF in the next scrit "11 Landings - First Species (HKE)" 
+# Thsi is just an example of how to find and manage missing data. 
+# Other solutions could be also applied if needed.
+
+# LANDINGS
+
+(Landing=read.table("D:/Andrea/Desktop/FISH Stock Assessment/STECF 2022/EFFORT REGIME/FEB/BEMTOOL_EWG_21_13_AND/landings_preparation/LND_GSA9_10_11_2004_2020.csv",sep=";", header=T))
+(colnames(Landing)[1] <- "Year")
+(colnames(Landing)[4] <- "FS")
+
+# We present an example using a single species HKE
+# spe <-"HKE"
+
+trans_year=c(2021)
+ts<-(2006:2021)
+
+FT1<-c("OTB","LLS","GNS","GTR","LLD")
+
+(Landing_A<-separate(Landing, col=FS, into=c("A","B","C","D","F"), sep="_"))
+(Landing_A<-Landing_A%>%
+    filter(A %in% FT1))
+
+(Landing_A<-Landing_A[ ,c(1,2,3,4,9,10,11)])
+(Landing_A$GSAX<-"GSA")
+(Landing_A<-Landing_A[ ,c(1,2,8,3,4,5,6,7)])
+
+# I start with the DTS OTB
+(Landing_1<-Landing_A%>%filter(A=="OTB"))
+(Landing_1$DTS<-"DTS")
+(Landing_1<-Landing_1%>%
+    unite("FS",GSAX:GSA, remove=T, sep=""))
+(Landing_1<-Landing_1[,c(3,8,5,4,1,2,6,7)])
+(Landing_1<-Landing_1%>%filter(Year%in%c(2006:2020)))
+(Landing_1<-Landing_1%>%
+    unite("FS",FS:A, remove = T))
+
+# NExt you may work with PGP
+
+FT2<-c("LLS","GNS","GTR","LLD")
+
+(Landing_2<-Landing_A%>%filter(A %in% FT2))
+(Landing_2$X<-"PGP")
+(Landing_2<-Landing_2[,c(3,4,9,6,1,2,7,8)])
+(Landing_2<-Landing_2%>%
+    unite("FS",GSAX:GSA, remove = T,sep = ""))
+(Landing_2<-Landing_2%>%filter(Year%in%c(2006:2020)))
+
+# Please clean PGP data you do not need or marge them. 
+# Here an example for GSA 9 where we marged "VL0006","VL0612" to  VL0012.
+
+(Landing_3<-Landing_2%>%
+    filter(VESSEL_length %in% c("VL0006","VL0612"))%>%
+    group_by( FS, X, Year, MESE , SPECIES)%>%
+    summarise(WEIGHT=sum(WEIGHT)))
+
+(Landing_3$VESSEL_length<-"VL0012")
+(Landing_3<-Landing_3[,c(1,2,7,3,4,5,6)])
+(Landing_4<-Landing_2%>%
+    filter(VESSEL_length %in% c("VL1218")))
+(Landing_34<-rbind(Landing_3,Landing_4)) # the two DF PGP
+(Landing_34<-Landing_34%>%unite("FS",FS:VESSEL_length, remove = T))
+
+
+(Landing_all<-rbind(Landing_1,Landing_34)) # the three DF DTS and the two PGP (merged)
+(Landing_all<-Landing_all%>%filter(FS!="GSA10_DTS_VL40XX_OTB"))
+
+# Please, check and filter for some extra LOA you do not need. 
+# After the check you finally have the all DF. 
+# Now we need to create a fake full dataframe. 
+# Please use this fake data frame with all the segments and years for checking data missing data in each year, LOA and species.
+
+(time<-c(2006:2020))
+(Fleet_seg1 <-c(sort(unique(Landing_all$FS)))) 
+#In this example 6 are the number of basic segments ( DTS VL0012, VL1218, VL2824, VL2440 + PGP VL0012, VL1218) times the three GSAs
+(Fleet_seg2 <-rep(Fleet_seg1, each=12)) # 12 are the months
+# the three GSAs 10, 11, 9 
+(Fleet_segments <-rep(Fleet_seg2, length(time)))
+(YEAR<-rep(c(2006:2020), each=(length(Fleet_seg2))))
+(MESE<-rep(c(1:12),length(YEAR)/12)) 
+(NULLDF<-data.frame(YEAR,MESE,Fleet_segments))
+(NULLDF$SPECIES<-0)
+(NULLDF$WEIGHT<-0.0001)
+# NB you will use these two data frame (fake data base and the full real-data dataframe) in the next script "11 Landings - First Species (HKE)" 
+# Please save them in your repository. 
+
+write.table(Landing_all,"D:/..../Landing_all.csv",  sep=";",row.names = F)
+write.table(NULLDF,"D:/..../NULLDF.csv",  sep=";",row.names = F)
+
+```
