@@ -1,0 +1,331 @@
+```{r}
+# Below the lines for the public FDI available data from 2015 to 2019 
+# You should first load the catch data for the available years.
+# THE SPLITTING IS FOR 3 GSA 9 10 11 and 1 species HKE as example
+library(readxl)
+library(tidyverse)
+library(tidyr)
+#dir<-"C:/Users/andre/OneDrive/Desktop/COISPA/BEMTOOL/Materiale per checkpoint2/DATA/2020_FDI_data/FDI-catches-by-country.xlsx"
+
+dir<-"D:/Andrea/Desktop/NEW_BEMTool/FDI_catches_by_country.xlsx"
+
+(Y2020<-read_xlsx(dir, sheet = 2))
+(Y2019<-read_xlsx(dir, sheet = 3))
+(Y2018<-read_xlsx(dir, sheet = 4))
+(Y2017<-read_xlsx(dir, sheet = 5))
+(Y2016<-read_xlsx(dir, sheet = 6))
+(Y2015<-read_xlsx(dir, sheet = 7))
+(Y2014<-read_xlsx(dir, sheet = 8))
+head(Y2019)
+
+#colnames(Y2020)=colnames(Y2019)=colnames(Y2018)=colnames(Y2017)=colnames(Y2016)=colnames(Y2015)
+catch<-rbind(Y2020,Y2019,Y2018,Y2017,Y2016,Y2015,Y2014)
+rm(Y2020,Y2019,Y2018,Y2017,Y2016,Y2015,Y2014)
+
+names(catch)[1]<-"country_code"
+names(catch)[14]<-"sub_region"
+names(catch)[6]<-"fishing_technique"
+names(catch)[2]<-"country_name"
+names(catch)[5]<-"vessel_length"
+names(catch)[8]<-"Target_Assemblage" 
+names(catch)[21]<-"total_live_weight_landed_tonnes"
+names(catch)[22]<-"total_value_of_landings_euro"
+names(catch)[23]<-"total_discards"
+names(catch)[7]<- "gear_type"
+
+# After you could select your country, GSAs and species
+
+#  MUT GSA 9 
+# DTS
+(DTS<-catch%>%
+    filter(country_name%in%c("Italy") & sub_region%in%c("GSA9","GSA10","GSA11") & species=="HKE" & fishing_technique=="DTS", gear_type=="OTB"))
+
+(DTS$total_discards[DTS$total_discards=="NK"] <- 0.000001)
+(DTS$total_discards<-as.numeric(DTS$total_discards))
+(DTS$total_discards<-DTS$total_discards*1000 )# here I convert tons to kg (BEMTool needs kg)
+
+(DTS1<-DTS%>%
+    group_by(year,sub_region,country_code,fishing_technique,gear_type,vessel_length,Quarter)%>%
+    summarise(total_discards=sum(total_discards)))
+
+(DTS1<-DTS1[,c(1,2,4,6,5,7,8)])
+(DTS2<-DTS1%>%unite("FS",year:Quarter, remove = T, sep = "_"))
+(DTS2<-DTS2%>%arrange(FS))
+
+# some time there are missing reported data by quarters and you need to find what quarter is missing in what year. 
+# you could first build a fake DF with all year and all metier and with a marge function see where the missing quarters are. 
+#fake DF It should be built according to what you need in terms of number of GSA, years, and loa 
+
+(year<-rep(c(2014:2020),each=16*3)) # here you repeat each year for the amount of fleet segments in all three GSAs (09-11)
+(sub_region1<-rep("GSA9",16))
+(sub_region2<-rep("GSA10",16))
+(sub_region3<-rep("GSA11",16))  
+(sub_region<-c(sub_region1,sub_region2,sub_region3)) # this is for one year only 
+(sub_region<-rep(sub_region,7)) # this is for the all time series (2014-2020)
+(fishing_technique<-rep("DTS",length(sub_region)))
+(vessel_length1<-rep("VL0612",4)) #  4 quarters
+(vessel_length2<-rep("VL1218",4)) #  4 quarters
+(vessel_length3<-rep("VL1824",4)) #  4 quarters
+(vessel_length4<-rep("VL2440",4)) #  4 quarters
+(vessel_length<-c(vessel_length1,vessel_length2,vessel_length3,vessel_length4))
+(vessel_length<-rep(vessel_length,3))# for the three GSAs
+(vessel_length<-rep(vessel_length,7)) # for the time series (7 years 2014:2020)
+(gear_type<-rep("OTB",length(vessel_length)))
+(Quarter<-rep(c(1:4),length(vessel_length)/4))
+(BASICDF<-data.frame(year,sub_region,fishing_technique,vessel_length,gear_type,Quarter))
+(BASICDF$total_discards<-0)
+(BASICDF<-BASICDF%>%unite("FS",year:Quarter, remove = T, sep = "_"))
+(BASICDF<-BASICDF%>%arrange(FS))
+
+#Now you marge the two DF ( real and fake one ) with the scope of insert missing quarters where no data are available with 0 
+
+(DTS_FULL<-merge(DTS2,BASICDF,  by.x ="FS", by.y="FS", all.x = F, all.y = T))# check the difference in rows between DTS2 and BASICDF. BASICDF should be bigger or equal to DTS2 if this not your case. Check, there is a problem!
+(DTS_FULL[is.na(DTS_FULL)] = 0.00001)
+(DTS_FULL<-DTS_FULL[,c(1,2)])
+colnames(DTS_FULL)[2]<-"total_discards"
+# now check it again
+
+# now you have the real data-frame with all quarters for each year and you can move from quarters to a months level
+(DTS_FULL$TOTDISCNEW<-DTS_FULL$total_discards/3)
+(DTS_FULL2<-rbind(DTS_FULL,DTS_FULL,DTS_FULL))
+(DTS_FULL2<-DTS_FULL2%>%arrange(FS))
+(DTS_FULL2$month<-rep(c(1:12), length(DTS_FULL2$FS)/12))
+
+(DTS_FULL2<-DTS_FULL2[,c(1,4,3)])
+colnames(DTS_FULL2)[3]<-"total_discards"
+
+(DTS_FULL2<-separate(DTS_FULL2, col=FS, into=c("A","B","C","D","FF","G"), sep="_")) # E' giusto qui FF?
+(DTS_FULL2<-DTS_FULL2%>%unite("fleet_segment",B:FF, remove = T))
+(DTS_FULL2<-DTS_FULL2[,c(1,2,4,5)])
+
+# at this point you should repeat all the process for the PGP as you did above for DTS .
+(PGP<-catch%>%
+    filter(country_name=="Italy" & sub_region%in%c("GSA9","GSA10","GSA11") & species=="HKE" & fishing_technique=="PGP"))
+(PGP$total_discards[PGP$total_discards=="NK"] <- 0.000001)
+(PGP$total_discards<-as.numeric(PGP$total_discards))
+
+(PGP$total_discards<-PGP$total_discards*1000 )# here I convert tons to kg (BEMTool needs kg)
+
+(PGP1<-PGP%>%
+    group_by(year,sub_region,country_code,fishing_technique,gear_type,vessel_length,Quarter)%>%
+    summarise(total_discards=sum(total_discards)))
+(PGP1<-PGP1%>%arrange(year,sub_region))
+
+(PGP1<-PGP1[,c(1,2,4,6,7,8)])
+(PGP1<-PGP1%>%unite("FS",year:vessel_length, remove = T, sep = "_"))
+
+(PGP1<-PGP1%>%
+    group_by(FS,Quarter)%>%
+    summarise(total_discards=sum(total_discards)))
+(PGP1<-PGP1%>%arrange(FS))
+
+# you need a similar fake dataframe as above
+(FS<-unique(PGP1$FS))
+(FS<-rep(FS, each=4 ))
+(Quarter<-rep(c(1:4),length(FS)/4))
+(BASICDFPGP1<-data.frame(FS,Quarter))
+(BASICDFPGP1$total_discards<-0)
+(BASICDFPGP1<-BASICDFPGP1%>%arrange(FS))
+(BASICDFPGP1<-BASICDFPGP1%>%unite("FS",FS:Quarter, remove = T, sep = "_"))
+
+(PGP2<-PGP1%>%unite("FS",FS:Quarter, remove = T, sep = "_"))
+(PGP2<-PGP2%>%arrange(FS))
+
+(DTS_FULL_PGP<-merge(PGP2,BASICDFPGP1,  by.x ="FS", by.y="FS", all.x = F, all.y = T))
+(DTS_FULL_PGP[is.na(DTS_FULL_PGP)] = 0.00001)
+(DTS_FULL_PGP<-DTS_FULL_PGP[,c(1,2)])
+colnames(DTS_FULL_PGP)[2]<-"total_discards"
+# check "DTS_FULL_PGP" dataframe
+
+(DTS_FULL_PGP$TOTDISCNEW<-DTS_FULL_PGP$total_discards/3)
+(DTS_FULL_PGP2<-rbind(DTS_FULL_PGP,DTS_FULL_PGP,DTS_FULL_PGP))
+(DTS_FULL_PGP2<-DTS_FULL_PGP2%>%arrange(FS))
+DTS_FULL_PGP2$month<-rep(c(1:12), length(DTS_FULL_PGP2$FS)/12)
+
+(DTS_FULL_PGP2<-DTS_FULL_PGP2[,c(1,4,3)])
+colnames(DTS_FULL_PGP2)[3]<-"total_discards"
+# check if there are missing data for specific years or fleet segments
+
+(DTS_FULL_PGP2<-separate(DTS_FULL_PGP2, col=FS, into=c("A","B","C","D","FF"), sep="_"))
+
+# now you start to grouping and checking PGP by LOA
+# maybe some LOA in some GSAs in specific Years are missing as under reported data. 
+# in this case you can assume similar discards of colse available years 
+# you could also aggregate some LOA if you need
+
+(DTS_FULL_PGP2_1218<-DTS_FULL_PGP2%>%
+    filter(D=="VL1218")%>%
+    group_by(A,B,C,D,month)%>%
+    summarise(total_discards=sum(as.numeric(total_discards))))
+
+(DTS_FULL_PGP2_1218<-DTS_FULL_PGP2_1218%>%arrange(A,B,D))
+
+(DTS_FULL_PGP2_1218<-DTS_FULL_PGP2_1218%>%unite("fleet_segment", B,C,D, remove = T))
+
+# same as above pluse here I grouped VL0006 with VL0012
+(DTS_FULL_PGP2_VL0006<-DTS_FULL_PGP2%>%
+    filter(D=="VL0006"))
+#check if there are some missing data in "DTS_FULL_PGP2_VL0006"
+
+(DTS_FULL_PGP2_VL0612<-DTS_FULL_PGP2%>%
+    filter(D=="VL0612"))
+#check if there are some missing data in "DTS_FULL_PGP2_VL0612"
+
+
+(DTS_FULL_PGP2_VL0012<-rbind(DTS_FULL_PGP2_VL0006,DTS_FULL_PGP2_VL0612))
+(DTS_FULL_PGP2_VL0012<-DTS_FULL_PGP2_VL0012%>%
+    group_by(A,B,C,month)%>%
+    summarise(total_discards=sum(as.numeric(total_discards))))
+(DTS_FULL_PGP2_VL0012$D<-"VL0012")
+
+(DTS_FULL_PGP2_VL0012<-DTS_FULL_PGP2_VL0012%>%unite("fleet_segment", B,C,D, remove = T))
+
+#Now you finally have your data frame with all months, metiers and LOA needed
+
+(UPDATE_FULL_DF<-rbind(DTS_FULL2, DTS_FULL_PGP2_VL0012,DTS_FULL_PGP2_1218))
+
+colnames(UPDATE_FULL_DF)[1]<-"year"
+(UPDATE_FULL_DF<-UPDATE_FULL_DF%>%arrange(year,fleet_segment))
+
+# a final check of "UPDATE_FULL_DF" is needed
+
+# if you do not have the last year as some time happen in DCF data (in my case for 2021) 
+# you could just copy the last available year with the following few lines 
+
+(DTS_NEW2021<-UPDATE_FULL_DF%>%filter(year=="2020"))
+(DTS_NEW2021[,1]<-rep(2021,length(DTS_NEW2021$year)))
+(NEW_DF<-rbind(UPDATE_FULL_DF,DTS_NEW2021))
+(NEW_DF<-NEW_DF%>%arrange(year,fleet_segment))
+# from here it should be finished the part with recent data 2014 to 2021 (2012 copied from 2020 data)
+
+# 2014 proportion evalutation if need for estimation back in time 
+# If you do not have data older than 2014 by quarters and metiers you may to calculate the portions (% by metiers and LOA) in 2014 and apply those portion back in time 
+(UPDATE_FULL_DF_2014<-NEW_DF%>%
+    filter(year=="2014"))
+
+(UPDATE_FULL_DF_2014$PERC<-UPDATE_FULL_DF_2014$total_discards/sum(UPDATE_FULL_DF_2014$total_discards))
+# In this example we applied the % of the last available year (2014). However, if you like you could also load a personal data frame with specific %. You could calculate the mean % of the last two or more years (2014,2015)
+# (DISC<-read.csv("...../mean_per_Discard_data.csv",sep=";"))
+
+# NB at this point you have an example of FDI discards data frame with % for three GSAs and five LOAs splitted by months in the last available year (2014) 
+# Just as example we will create below a (fake) data frame with Discards data for the previous year 2006-2013.
+# Next we will use the % FDI data frame in 2014 to split the older (fake) discard data frame (2006-2013) by GSA, LOA, Quarter and Month. 
+# Please, create this (fake) second data frame using the same labels present in the 2014 % FDI data frame. 
+# The two data frame Old (2006-2013) and new (2014-2021) should have the same structure and Fleet segments labels.
+
+# Step 1) Create the "basic_DF" with discard data before 2014 
+# Please, fill in the data frame with your discard data from 2006 to 2013 for your GSAs ( Three in this example ) and fishing technique (DTS and PGP in this example)
+
+N<-8 # here insert the missing years you need (2006-2013)
+NN<-2 # fishing technique (DTS and PGP)
+NGSA<-3 # GSA 10, GSA 9, GSA 11
+(year<-rep(c(2006:2013), each=NN))
+(year<-rep(year,NGSA))
+
+(sub_region_all<-rep(c("GSA10","GSA9","GSA11"), each= N*NN) )# 2 is are the two fishing fishing technique (DTS and PGP
+(Fishing_Technique<-rep(c("DTS","PGP"), length(sub_region_all)/NN))
+(Total_discards<-c(GSA10_DTS_2006<-80, # 80 kg is just an example value. Please add your actual values in kg. These can be found, for exampe, in the official stock assessment reports. 
+                   GSA10_PGP_2006<-80,
+                   GSA10_DTS_2007<-80,
+                   GSA10_PGP_2007<-80,
+                   GSA10_DTS_2008<-80,
+                   GSA10_PGP_2008<-80,
+                   GSA10_DTS_2009<-80,
+                   GSA10_PGP_2009<-80,  
+                   GSA10_DTS_2010<-80,
+                   GSA10_PGP_2010<-80,
+                   GSA10_DTS_2011<-80,
+                   GSA10_PGP_2011<-80,
+                   GSA10_DTS_2012<-80,
+                   GSA10_PGP_2012<-80,
+                   GSA10_DTS_2013<-80,
+                   GSA10_PGP_2013<-80,
+                   
+                   GSA9_DTS_2006<-50, # 50 kg is just an example value. Please add your values in kg. 
+                   GSA9_PGP_2006<-50,
+                   GSA9_DTS_2007<-50,
+                   GSA9_PGP_2007<-50,
+                   GSA9_DTS_2008<-50,
+                   GSA9_PGP_2008<-50,
+                   GSA9_DTS_2009<-50,
+                   GSA9_PGP_2009<-50,  
+                   GSA9_DTS_2010<-50,
+                   GSA9_PGP_2010<-50,
+                   GSA9_DTS_2011<-50,
+                   GSA9_PGP_2011<-50,
+                   GSA9_DTS_2012<-50,
+                   GSA9_PGP_2012<-50,
+                   GSA9_DTS_2013<-50,
+                   GSA9_PGP_2013<-50,
+                   
+                   GSA11_DTS_2006<-30, # 30 kg is just an example value. Please add your values in kg. 
+                   GSA11_PGP_2006<-30,
+                   GSA11_DTS_2007<-30,
+                   GSA11_PGP_2007<-30,
+                   GSA11_DTS_2008<-30,
+                   GSA11_PGP_2008<-30,
+                   GSA11_DTS_2009<-30,
+                   GSA11_PGP_2009<-30,  
+                   GSA11_DTS_2010<-30,
+                   GSA11_PGP_2010<-30,
+                   GSA11_DTS_2011<-30,
+                   GSA11_PGP_2011<-30,
+                   GSA11_DTS_2012<-30,
+                   GSA11_PGP_2012<-30,
+                   GSA11_DTS_2013<-30,
+                   GSA11_PGP_2013<-30))
+
+(basicDF<-data.frame(year,sub_region_all,Fishing_Technique,Total_discards)) # this is the data base with your data that will be splitted. 
+
+# Next, you need a total discards value by each year for all GSAs grouped. 
+# It is not a problem to bind the all gsas due to the fact that those are the same GSas of the 2014 % data frame.
+# Please be sure that the GSAs order in the two data frame ( 2006-2013 and 2014% ) are exactly the same. 
+
+(basicD_2<-basicDF%>%
+  group_by(year)%>%
+  summarise(Total_discards=sum(Total_discards)))
+
+(basicD_3<-basicD_2[rep(c(1:N), nrow(UPDATE_FULL_DF_2014)), ])
+(basicD_3<-basicD_3%>%arrange(year))
+
+(UPDATE_FULL_DF_2014_duplicated<-UPDATE_FULL_DF_2014[rep(c(1:nrow(UPDATE_FULL_DF_2014)),N),])
+(BIG_NEW_DF<-cbind(UPDATE_FULL_DF_2014_duplicated,basicD_3))
+(BIG_NEW_DF$new_discards<-BIG_NEW_DF$PERC*BIG_NEW_DF$Total_discards)
+
+############## TEST ######################
+# Please check if it is all right 
+(test<-BIG_NEW_DF[c(1:nrow(UPDATE_FULL_DF_2014)),c(6,2,3,8)])
+sum(test$new_discards) # The sum should be equal to the sum of your data grouped by the GSAs in the same year
+#########################################
+
+(BIG_NEW_DF<-BIG_NEW_DF[,c(6,2,3,8)])
+colnames(BIG_NEW_DF)[4]<-"total_discards"
+# Step 2) Finally you can bind the spitted old data frame created (2006-2013) with the recent discards data frame (2014-2021)
+
+
+(DISCARD_DATA<-rbind(BIG_NEW_DF,NEW_DF))
+
+# Please change the label of months from numbers to letters
+DISCARD_DATA$month<-c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Set", "Oct", "Nov", "Dec")
+
+
+(df0 <- data.frame(matrix(nrow=0, ncol=4)))
+(colnames(df0) <-c("year",	"month",	"total_discards",	"fleet_segment"))
+(segs<-unique(DISCARD_DATA$fleet_segment))
+
+
+for(n in 1 : length(segs)){ 
+  (years <- min(DISCARD_DATA[DISCARD_DATA$fleet_segment==segs[n], "year"]))
+  (appoggio <- data.frame(matrix(nrow=1, ncol=4)))
+  (colnames(appoggio) <-c("year",	"month",	"total_discards",	"fleet_segment"))
+  (appoggio[,2]<-"seed")
+  (appoggio[,3]<-sum(DISCARD_DATA[DISCARD_DATA$fleet_segment==segs[n] & DISCARD_DATA$year==years,"total_discards"]))
+  (appoggio[,4]<-segs[n])
+  df0 <- rbind(df0,appoggio,DISCARD_DATA[DISCARD_DATA$fleet_segment==segs[n],])
+}
+
+(Discard_data<-df0)
+
+# Please add your directory and save your file in csv format in your INPUT folder. 
+# write.table(Discard_data,...../Discard data.csv",sep=";",row.names=F)
+```
