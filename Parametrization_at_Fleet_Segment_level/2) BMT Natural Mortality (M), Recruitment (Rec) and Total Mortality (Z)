@@ -1,0 +1,241 @@
+Natural mortality
+
+```{r echo=F}
+# M
+#(M_file=read.csv2("D:/Andrea/Desktop/script per parametrizzazione BEMTOOL/input formats/DPS/Natural_mortality_vector.csv", sep=";", header=TRUE, check.names=FALSE))
+
+(age<-c("age","0","1", "2", "3")) # add here the correct number of ages
+(natM<-c("nat",1.75,	0.938,	0.748,	0.673))
+(M_file<-matrix(natM, 1, 5))
+(M_file<-as.data.frame(M_file))
+(colnames(M_file)<-age) 
+
+tr=2  # in months, tr is the age of recruitment to the fishing ground 
+lifespan=4 # Life span equal to n of ages
+(age_month=seq(tr,lifespan*12,1))
+(M=age_month)
+
+for (r in 1:(length(age_month)-1)){
+  age=trunc(age_month[r]/12,0)
+  M[r]=M_file[1,age+2]
+}
+
+(M[length(age_month)]=M[length(age_month)-1])
+
+(DF_M=data.frame(age_month=age_month,	M=M))
+
+write.table(DF_M,paste(dir2,"/",SPECIES_5,"/M.csv",sep=""),sep=";",row.names=F)  
+
+```
+
+
+Recruitment
+
+```{r echo=F}
+#RECRUITS
+#(Rec_file=read.table("D:\\Andrea\\Desktop\\script per parametrizzazione BEMTOOL\\input formats\\DPS\\Recruits.csv",sep=";",header=T))
+
+# Please, add you recruitments form the stock assessment
+
+ts<-c(2004:2020)
+(year<-c(2004:2020))
+
+(R<-c(2026625,
+1975589,
+1833002,
+1703895,
+1619353,
+1541422,
+1438376,
+1346085,
+1348740,
+1529795,
+1947296,
+2575489,
+3221716,
+3623722,
+3708076,
+3608000,
+3459810
+
+
+
+
+)) 
+
+(Rec_file<-data.frame(year,R))
+(Rec=Rec_file[Rec_file[,1] %in% ts,])
+
+(DF_R=data.frame(year=ts,	seed= c(Rec[1,2],rep("",(length(ts)-1))),	Jan=Rec[,2],	Feb=Rec[,2],	Mar=Rec[,2],	Apr=Rec[,2],	May=Rec[,2],	Jun=Rec[,2],	Jul=Rec[,2],	Aug=Rec[,2],	Sep=Rec[,2],	Oct=Rec[,2],	Nov=Rec[,2],	Dec=Rec[,2]))
+write.table(DF_R,paste(dir2,"/",SPECIES_1,"/Recruitment.csv",sep=""),sep=";",row.names=F)  
+
+```
+
+Z
+
+
+```{r  echo=F}
+# Z
+
+# ATTENTION!!!! RUN OR CASE 1 OR CASE 2!
+#______________________________________________________
+
+# CASE 1 - if you have F at age (stock assessment with age structured models)
+
+#F_file=read.table(paste(path_input,"\\F_at_age.csv",sep=""),sep=";", header=T)
+
+(Year_age<-ts)
+(zero<-c(0.21,
+0.22,
+0.23,
+0.23,
+0.25,
+0.26,
+0.28,
+0.3,
+0.3,
+0.29,
+0.28,
+0.28,
+0.28,
+0.3,
+0.3,
+0.3,
+0.3
+
+ 
+))
+(one<-c(1.6,
+1.68,
+1.72,
+1.76,
+1.85,
+1.99,
+2.13,
+2.23,
+2.24,
+2.18,
+2.11,
+2.1,
+2.15,
+2.22,
+2.29,
+2.3,
+2.27
+))
+
+(two<-c(1.6,
+1.68,
+1.72,
+1.76,
+1.85,
+1.99,
+2.13,
+2.23,
+2.24,
+2.18,
+2.11,
+2.1,
+2.15,
+2.22,
+2.29,
+2.3,
+2.27
+))
+
+(three<-c(1.6,
+1.68,
+1.72,
+1.76,
+1.85,
+1.99,
+2.13,
+2.23,
+2.24,
+2.18,
+2.11,
+2.1,
+2.15,
+2.22,
+2.29,
+2.3,
+2.27
+ 
+))
+
+
+
+
+(F_file<-data.frame(Year_age,zero,one,two,three))
+colnames(F_file)[2]<-"0"
+colnames(F_file)[3]<-"1"
+colnames(F_file)[4]<-"2"
+colnames(F_file)[5]<-"3"
+#colnames(F_file)[5]<-"4"
+(Fish_mort=F_file[F_file[,1] %in% ts,])
+
+(M_vector=read.table("C:/INPUT/DPS17-18-19/Natural_mortality_PAPELON FAIRSEA.csv",sep=";", header=T))
+
+(mean_M=mean(as.numeric(M_vector[,2])))
+
+(F_range=c(1,3))
+
+(F_bar=data.frame(year=ts,Fbar=rowMeans(Fish_mort[,c((F_range[1]+2):(F_range[2]+2))])))
+
+(Z_bar=F_bar)
+(Z_bar[,2]=Z_bar[,2]+mean_M)
+
+
+(DF_Z=data.frame(year=ts,	seed= c(Z_bar[1,2],rep("",(length(ts)-1))),	Jan=Z_bar[,2],	Feb=Z_bar[,2],	Mar=Z_bar[,2],	Apr=Z_bar[,2],	May=Z_bar[,2],	Jun=Z_bar[,2],	Jul=Z_bar[,2],	Aug=Z_bar[,2],	Sep=Z_bar[,2],	Oct=Z_bar[,2],	Nov=Z_bar[,2],	Dec=Z_bar[,2],sex="M"))
+(DF_Z2=DF_Z)
+(DF_Z2$sex="F")
+(DF_Z=rbind(DF_Z,DF_Z2))
+
+write.table(DF_Z,"C:/INPUT/DPS17-18-19/Zmean.csv",sep=";", row.names=F)
+```
+
+```{r  include=F}
+# CASE 2 - if you have F mean (stock assessment with production models)
+
+#F_file=read.table(paste(path_input,"\\F_mean.csv",sep=""),sep=";", header=T)
+
+# please insert years and Fmean 
+spe<-"SOL"
+(Year_Age<-c(2004:2020))
+ts<-Year_Age
+(Fmean<-c(0.325507592,
+0.481080823,
+0.46272896,
+0.446143368,
+0.376239791,
+0.794137749,
+0.577544714,
+0.55487867,
+0.439292491,
+0.267395521,
+0.274605612,
+0.337239734,
+0.288492218,
+0.376338758,
+0.309156193,
+0.295994286,
+0.19355407
+)) 
+
+(F_file<-data.frame(Year_Age,Fmean))
+write.table(F_file,"C:/INPUT/SOL17/Fmaen_used_for_M_calcualtion.csv",sep=";",row.names=F)  
+
+(Fish_mort=F_file[F_file[,1] %in% ts,])
+(M_vector=read.table("C:/INPUT/SOL17/M_SOL.csv", sep=";", header=T))
+#(M_vector=read.table(paste("C:\\INPUT\\",spe,"17\\M_",spe,".csv",sep=""),sep=";", header=T))
+
+(mean_M=mean(as.numeric(M_vector[,2])))
+(Z_bar=Fish_mort)
+(Z_bar[,2]=Z_bar[,2]+mean_M)
+
+(DF_Z=data.frame(year=ts,	seed= c(Z_bar[1,2],rep("",(length(ts)-1))),	Jan=Z_bar[,2],	Feb=Z_bar[,2],	Mar=Z_bar[,2],	Apr=Z_bar[,2],	May=Z_bar[,2],	Jun=Z_bar[,2],	Jul=Z_bar[,2],	Aug=Z_bar[,2],	Sep=Z_bar[,2],	Oct=Z_bar[,2],	Nov=Z_bar[,2],	Dec=Z_bar[,2],sex="M"))
+(DF_Z2=DF_Z)
+(DF_Z2$sex="F")
+(DF_Z=rbind(DF_Z,DF_Z2))
+
+write.table(DF_Z,"C:/INPUT/SOL17/Zmean.csv",sep=";",row.names=F)  
