@@ -1,0 +1,327 @@
+```{r}
+# packages requested
+
+library(readxl)
+library(tidyverse)
+library(tidyr)
+
+# You can use thi script as example for creating days files by month for BMT.
+# Also in this case you need the vessel file ready. 
+
+(RECENTDATADAY<-read.csv("D:/Andrea/Desktop/NEW_BEMTool/FDI_effort_by_country.csv", sep = ";"))
+
+COUNTRY<-"Italy"
+GSA<-"GSA9"
+FT1<-"DTS"
+LOA1<-c("VL0612","VL1218","VL1824","VL2440")
+
+
+(GSA9_DAY_A<-RECENTDATADAY%>% 
+    select(country_name,year,Vessel_Length,Fishing_Technique,Sub_region,Total_days_at_sea)%>%
+    filter(country_name%in%COUNTRY &  Fishing_Technique%in%FT1 & Vessel_Length%in%LOA1 & Sub_region%in%GSA))
+
+# below some aggregation for some PGP LOA
+# this aggregation are totally arbitrary 
+COUNTRY<-"Italy"
+GSA<-"GSA9"
+FT2<-"PGP"
+LOA2<-c("VL0006","VL0612")
+
+
+(GSA9_DAY_B1<-RECENTDATADAY%>%
+    select(country_name,year,Vessel_Length,Fishing_Technique,Sub_region,Total_days_at_sea)%>%
+    filter(country_name%in%COUNTRY &  Fishing_Technique%in%FT2 & Vessel_Length%in%LOA2 & Sub_region%in%GSA)%>%
+    group_by(country_name,year,Fishing_Technique,Sub_region)%>%
+    summarise(Total_days_at_sea=sum(as.numeric(Total_days_at_sea))))
+GSA9_DAY_B1$Vessel_Length<-"VL0012"
+
+(GSA9_DAY_B2<-RECENTDATADAY%>%
+    select(country_name,year,Vessel_Length,Fishing_Technique,Sub_region,Total_days_at_sea)%>%
+    filter(country_name%in%COUNTRY &  Fishing_Technique%in%FT2 & Vessel_Length%in%c("VL1218") & Sub_region%in%GSA))
+
+GSA9_DAY<-rbind(GSA9_DAY_A,GSA9_DAY_B1,GSA9_DAY_B2)
+
+GSA9_DAY$Month<-0
+GSA9_DAY$Unit<-"Days"
+GSA9_DAY$Source<-"FDI_capacity_by_country"
+
+head(GSA9_DAY)
+(GSA9_DAY<-GSA9_DAY[,c(5,4,3,2,7,6,8,9)])
+
+(GSA9_DAY<-GSA9_DAY%>%
+    arrange(year,Fishing_Technique,Vessel_Length)%>%
+    group_by(Sub_region,Fishing_Technique,Vessel_Length,year,Month,Unit,Source)%>%
+    summarise(Total_days_at_sea=sum(as.numeric(Total_days_at_sea))))
+
+(GSA9_DAY<-GSA9_DAY%>%arrange(year,Fishing_Technique,Vessel_Length))
+
+#RECENT DATA some labels changes needed
+colnames(GSA9_DAY)[1]<-"GSA"
+colnames(GSA9_DAY)[2]<-"fishing_tech"
+colnames(GSA9_DAY)[3]<-"vessel_length"
+colnames(GSA9_DAY)[8]<-"value"
+colnames(GSA9_DAY)[6]<-"unit"
+
+# Test 2 #=================================================================================================
+# Here the extraction of the data from 2008 to 2013
+
+dir<-"D:/Andrea/Desktop/NEW_BEMTool/2018-07_STECF_18-07-EU_Fleet_Effort_FAO_Gear_levels_final.xlsx"
+
+(OLD_DATA_DAYS<-read_xlsx(dir, sheet = 2))
+
+# First I group all the GSAs 
+
+CC<-"ITA"
+
+(OLD_DATA_DAYS_DTS<-OLD_DATA_DAYS%>%
+    select(country_code,year,fishing_tech,variable_code,sub_reg,vessel_length,value,unit)%>%
+    filter(country_code%in%CC, variable_code%in%"totseadays" & fishing_tech%in%FT1  & vessel_length%in%LOA1 & sub_reg%in%"sa 9"))
+
+(OLD_DATA_DAYS_PGP_1<-OLD_DATA_DAYS%>%
+    select(country_code,year,fishing_tech,variable_code,sub_reg,vessel_length,value,unit)%>%
+    filter(country_code%in%CC, variable_code%in%"totseadays" & fishing_tech%in%FT2 & vessel_length%in%LOA2 & sub_reg%in%"sa 9")%>%
+    group_by(country_code,year,fishing_tech,variable_code,sub_reg,unit)%>%
+    summarise(value=sum(as.numeric(value))))
+
+OLD_DATA_DAYS_PGP_1$vessel_length<-"VL0012"
+
+(OLD_DATA_DAYS_PGP_2<-OLD_DATA_DAYS%>%
+    select(country_code,year,fishing_tech,variable_code,sub_reg,vessel_length,value,unit)%>%
+    filter(country_code%in%CC, variable_code%in%"totseadays" & fishing_tech%in%FT2 & vessel_length%in%"VL1218" & sub_reg%in%"sa 9"))
+
+(OLD_DATA_DAYS<-rbind(OLD_DATA_DAYS_DTS,OLD_DATA_DAYS_PGP_1,OLD_DATA_DAYS_PGP_2))
+(OLD_DATA_DAYS<-OLD_DATA_DAYS%>%arrange(year,fishing_tech,vessel_length))
+OLD_DATA_DAYX<-OLD_DATA_DAYS[9,]
+OLD_DATA_DAYX$year[OLD_DATA_DAYX$year%in%"2009"]<-"2008"
+(OLD_DATA_DAYS<-rbind(OLD_DATA_DAYX,OLD_DATA_DAYS))
+(OLD_DATA_DAYS<-OLD_DATA_DAYS%>%arrange(year,fishing_tech,vessel_length))
+
+# This is the old data set I need.
+
+(OLD_DATA_3<-OLD_DATA_DAYS%>%filter(year%in%c("2008","2009","2010","2011","2012","2013")))
+
+# Please, check if something is missing.
+
+(OLD_DATA_3<-OLD_DATA_3%>%arrange(year,fishing_tech,vessel_length))
+
+# Some time you have some missing data in some specific years. 
+# NB all the csv INPUT file in BMT shall have the same time series length. 
+# In this example you need to create the absent 2006 and 2007 data equal to 2008. 
+
+(OLD_DATA_2006<-OLD_DATA_3%>%filter(year%in%"2008"))
+(OLD_DATA_2006[,2]<-c(rep("2006",6)))
+
+(OLD_DATA_2007<-OLD_DATA_3%>%filter(year%in%"2008"))
+(OLD_DATA_2007[,2]<-c(rep("2007",6)))
+
+# Now you may merge all the old data set
+
+(OLD_DATA_4<-rbind(OLD_DATA_2006,OLD_DATA_2007,OLD_DATA_3))
+
+OLD_DATA_4$Source<-"STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment"
+OLD_DATA_4$GSA<-GSA
+OLD_DATA_4$Month<-0 
+OLD_DATA_4$unit<-"Days"
+
+(OLD_DATA_4<-OLD_DATA_4[,c(10,3,6,2,11,7,8,9)])
+
+(BIGDF<-rbind(OLD_DATA_4,GSA9_DAY))
+(BIGDF<-BIGDF%>%arrange(year,fishing_tech,vessel_length))
+
+(BIGDF_DTS<-BIGDF%>%filter(vessel_length%in%LOA1 & fishing_tech%in%FT1))#segment ok
+(BIGDF_PGP<-BIGDF%>%filter(fishing_tech%in%FT2 & vessel_length%in%c("VL0012","VL1218")))
+(BIGDF_DTS$gear<-"OTB")
+(BIGDF_DTS<-BIGDF_DTS[,c(1,2,3,9,4,5,6,7,8)]%>%unite("FS",c(GSA:gear), remove = T))
+(BIGDF_PGP<-BIGDF_PGP%>%unite("FS",c(GSA:vessel_length), remove = T))
+
+(FINALDFDAY<-rbind(BIGDF_DTS,BIGDF_PGP))
+(FINALDFDAY<-FINALDFDAY%>%arrange(year,FS))
+
+colnames(FINALDFDAY)[2]<-"Year"
+colnames(FINALDFDAY)[4]<-"Days"
+colnames(FINALDFDAY)[5]<-"Unit"
+(FINALDFDAY$Days<-round(as.numeric(FINALDFDAY$Days)))
+
+FINALDFDAY
+
+# Please add you repository 
+write.table(FINALDFDAY,"D:/Andrea/Desktop/NEW_BEMTool/FINALDFDAY.csv",sep=";",row.names=F)      
+
+Fleet_segments<-unique(FINALDFDAY$FS) 
+
+ts<-c(2006:2021)
+
+trans_year=c(2021)
+
+# Days
+
+# library(tidyverse)
+Days_data<-FINALDFDAY
+
+(DF1=matrix(0,nrow=12,ncol=length(ts)))
+(colnames(DF1)=ts)
+(rownames(DF1)=seq(1,12,1))
+
+(Days_data_temp=Days_data[Days_data$FS==Fleet_segments[1],])
+
+for (rr in 1:nrow(Days_data_temp)){
+  
+  year=Days_data_temp$Year[rr] 
+  month=Days_data_temp$Month[rr]
+  #unit=Days_data_temp$Unit[rr]
+  
+  if (month!=0){
+    DF1[rownames(DF1)==month,colnames(DF1)==year]=Days_data_temp$Days[rr]
+  } else if (month==0){
+    DF1[,colnames(DF1)==year]=Days_data_temp$Days[rr]/12
+  }  
+  
+}
+
+(DF1[,colnames(DF1) %in% trans_year]=DF1[,as.numeric(colnames(DF1)) == (trans_year[1]-1)])
+
+for (fs in Fleet_segments[-1]){
+  
+  print(fs,quote=F)
+  DF_next=matrix(0,nrow=12,ncol=length(ts))
+  colnames(DF_next)=ts
+  rownames(DF_next)=seq(1,12,1)
+  
+  # Fleet_segments[1]
+  
+  Days_data_temp=Days_data[Days_data$FS==fs,]
+  
+  for (rr in 1:nrow(Days_data_temp)){
+    
+    year=Days_data_temp$Year[rr] 
+    month=Days_data_temp$Month[rr]
+    unit=Days_data_temp$Unit[rr]
+    
+    if (month!=0){
+      DF_next[rownames(DF_next)==month,colnames(DF_next)==year]=Days_data_temp$Days[rr]  
+      
+    } else if (month==0){
+      
+      DF_next[,colnames(DF_next)==year]=Days_data_temp$Days[rr]/12  
+    }  
+    
+  }
+  
+  (DF_next[,colnames(DF_next) %in% trans_year]= DF_next[,as.numeric(colnames(DF_next)) == (trans_year[1]-1)])
+  
+  DF1=cbind(DF1,DF_next)
+  
+} # cycle FS
+
+Days=DF1
+
+# VESSELS
+
+(Vess_data=FINALDF)
+
+(Vess_data=Vess_data[Vess_data$Year %in% ts & Vess_data$FS %in% Fleet_segments,])
+
+(DF1=matrix(0,nrow=12,ncol=length(ts)))
+(colnames(DF1)=ts)
+(rownames(DF1)=seq(1,12,1))
+
+#Fleet_segments[1]
+(Vess_data_temp=Vess_data[Vess_data$FS==Fleet_segments[1],])
+
+for (rr in 1:nrow(Vess_data_temp)){
+  
+  year=Vess_data_temp$Year[rr] 
+  month=Vess_data_temp$Month[rr]
+  #unit=Vess_data_temp$Unit[rr]
+  
+  if (month!=0){
+    DF1[rownames(DF1)==month,colnames(DF1)==year]=Vess_data_temp$Vess[rr]
+  } else if (month==0){
+    DF1[,colnames(DF1)==year]=Vess_data_temp$Vess[rr]
+  }  
+  
+}
+
+(DF1[,colnames(DF1) %in% trans_year]= DF1[,as.numeric(colnames(DF1)) == (trans_year[1]-1)])
+
+for (fs in Fleet_segments[-1]){
+  
+  print(fs,quote=F)
+  DF_next=matrix(0,nrow=12,ncol=length(ts))
+  colnames(DF_next)=ts
+  rownames(DF_next)=seq(1,12,1)
+  
+  # Fleet_segments[1]
+  Vess_data_temp=Vess_data[Vess_data$FS==fs,]
+  
+  for (rr in 1:nrow(Vess_data_temp)){
+    
+    year=Vess_data_temp$Year[rr] 
+    month=Vess_data_temp$Month[rr]
+    unit=Vess_data_temp$Unit[rr]
+    
+    if (month!=0){
+      DF_next[rownames(DF_next)==month,colnames(DF_next)==year]=Vess_data_temp$Vess[rr]  
+      
+    } else if (month==0){
+      
+      DF_next[,colnames(DF_next)==year]=Vess_data_temp$Vess[rr]  
+    }  
+    
+  }
+  DF_next[,colnames(DF_next) %in% trans_year]= DF_next[,as.numeric(colnames(DF_next)) == (trans_year[1]-1)]
+  
+  DF1=cbind(DF1,DF_next)
+  
+} # cycle FS
+
+(Vess=DF1)
+
+for (f in 1:length(Fleet_segments)){
+  ini=1+(f-1)*length(ts)
+  fin=(f)*length(ts)
+  Vess[which(Days==0)][ini:fin] = mean(Vess[,ini:fin],na.rm=T )  
+}
+
+(Avg_days=round(Days/Vess))
+
+#FirstRow=t(data.frame(rep(ts,length(Fleet_segments))))
+#FirstRow=c("Units: kg",FirstRow)
+
+(SecondRow=t(data.frame(rep(Fleet_segments[1],length(ts)))  ))
+
+for (fs in Fleet_segments[-1]){
+  print(fs)
+  SecondRow2=t(data.frame(rep(fs,length(ts))))
+  
+  SecondRow=cbind(SecondRow,SecondRow2) 
+  
+}
+
+(empty_row=t(data.frame(rep("",length(SecondRow)))))
+
+(DF_final=(rbind(SecondRow,empty_row,empty_row)))
+
+(DF_final=rbind(DF_final,as.matrix(Avg_days)))
+
+DF_final= cbind(c(     "casestudy.fleetsegmentcode",
+                       "casestudy.fishingtechnique",
+                       "casestudy.loa",
+                       "casestudy.month1",
+                       "casestudy.month2",
+                       "casestudy.month3",
+                       "casestudy.month4",
+                       "casestudy.month5",
+                       "casestudy.month6",
+                       "casestudy.month7",
+                       "casestudy.month8",
+                       "casestudy.month9",
+                       "casestudy.month10",
+                       "casestudy.month11",
+                       "casestudy.month12"
+),DF_final)
+
+colnames(DF_final)[1]="Units: days"
+write.table(DF_final,"D:/Andrea/Desktop/NEW_BEMTool/TEST_DAYS.csv",sep=";",row.names=F)      
+
+```
