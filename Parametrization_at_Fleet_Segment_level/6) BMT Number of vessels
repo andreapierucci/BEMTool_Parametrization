@@ -1,0 +1,305 @@
+```{r}
+# packages requested 
+
+library(readxl)
+library(tidyverse)
+library(tidyr)
+
+# STEP  1 #===================================================================
+
+# Below an example of a number of vessels.csv construction for the GSA 9 is presented.
+# For this example we use Italian FDI official data 
+
+(RECENTDATA2<-read.csv("D:/Andrea/Desktop/NEW_BEMTool/FDI_capacity_by_country.csv", sep = ";"))
+
+# Below I select my fleet segments and the GSAs I need ( GSA9 )
+
+COUNTRY<-"Italy"
+FT1<-"DTS"
+LOA<-c("VL0612" ,"VL1218", "VL1824", "VL2440")
+AREA<-"GSA9"
+
+(GSA9_2_A<-RECENTDATA2%>% 
+    select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.vessels)%>%
+    filter(Country.name%in%COUNTRY &  Fishing.Technique%in% FT1 & Vessel.Length.Category%in%LOA & principal.sub.region%in%AREA))
+
+# I need to add the gear for lable consistency 
+GSA9_2_A$gear<-"OTB"
+
+# At this time a need to aggregate pgp VL0006 with VL0612 as VL0012. This kind of aggregation are defined by the user.
+
+FT2<-"PGP"
+LOA<-c("VL0006","VL0612")
+
+(GSA9_2_B1<-RECENTDATA2%>%
+    select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.vessels)%>%
+    filter(Country.name%in%COUNTRY & Fishing.Technique%in%FT2 & Vessel.Length.Category%in%LOA & principal.sub.region%in%AREA)%>%
+    group_by(Country.name,year,Fishing.Technique,principal.sub.region)%>%
+    summarise(total.vessels=sum(as.numeric(total.vessels))))
+GSA9_2_B1$Vessel.Length.Category<-"VL0012"
+
+
+LOA<-c("VL1218")
+
+(GSA9_2_B2<-RECENTDATA2%>%
+    select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.vessels)%>%
+    filter(Country.name%in%COUNTRY &  Fishing.Technique%in%FT2 & Vessel.Length.Category%in%LOA & principal.sub.region%in%AREA))
+(GSA9_2_A<-GSA9_2_A[,c(5,4,3,7,2,6)]%>%unite("FS",c(principal.sub.region:gear), remove = T))
+(GSA9_2_B1<-GSA9_2_B1[,c(4,3,6,2,5)]%>%unite("FS",c(principal.sub.region:Vessel.Length.Category), remove = T))
+(GSA9_2_B2<-GSA9_2_B2[,c(5,4,3,2,6)]%>%unite("FS",c(principal.sub.region:Vessel.Length.Category), remove = T))
+
+GSA9_2<-rbind(GSA9_2_A,GSA9_2_B1,GSA9_2_B2)
+
+GSA9_2$Month<-0
+GSA9_2$Unit<-"vess"
+GSA9_2$Source<-"FDI_capacity_by_country"
+(GSA9_2<-GSA9_2%>%arrange(year,FS))
+colnames(GSA9_2)[2]<-"Year"
+colnames(GSA9_2)[3]<-"Vess"
+
+# Step 2 #======================================================================
+
+# Now we load old data from 2008 to 2013 where available in 08_EU_Fleet_Economic_and_Transversal_data_fleet_segment.xlsx. 
+# Unfortunately this data are at a Country level only. Fleet segment and GSA detail are not presents. 
+# NB. If data in 2006 and 2007 are not present please assume those equal to 2008. 
+# The lenght of time series should be mantained the same for all the input csv file created for BMT. 
+# To solve this missing data problem, please calculate the % of your GSA respect to all the GSA in your country from the FDI data in 2014. 
+# After, I can apply this % to STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment data where there are not specification by GSA but by Country only.
+# This is a way to solve this missing problem you may have other solutions. 
+# Here the extraction of data from 2008 to 2013.
+
+dir<-"D:/Andrea/Desktop/NEW_BEMTool/STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment.xlsx"
+
+(OLD_DATA<-read_xlsx(dir, sheet = 2))
+
+# Below the all GSA extraction
+
+CC= "ITA"
+FT1= "DTS"
+LOA<-c("VL0612" ,"VL1218", "VL1824", "VL2440")
+
+(OLD_DATA_DTS<-OLD_DATA%>%
+    select(country_code,supra_reg,year,fishing_tech,variable_code,vessel_length,variable_code,value,unit)%>%
+    filter(country_code%in%CC, variable_code%in%"totves" & fishing_tech%in% & supra_reg %in%"AREA37" & vessel_length%in%LOA))
+
+
+CC= "ITA"
+FT2= "PGP"
+
+(OLD_DATA_PGP<-OLD_DATA%>%
+    select(country_code,supra_reg,year,fishing_tech,variable_code,vessel_length,value,unit)%>%
+    filter(country_code%in%CC, variable_code%in%"totves" & fishing_tech%in%FT2 & supra_reg %in%"AREA37" & vessel_length%in%c("VL0612" ,"VL1218")))
+(OLD_DATA_PGP$vessel_length[OLD_DATA_PGP$vessel_length%in%"VL0612"]<-"VL0012")
+(OLD_DATA<-rbind(OLD_DATA_DTS,OLD_DATA_PGP))
+
+# This is the old data i need
+(OLD_DATA_2<-OLD_DATA%>%arrange(year,fishing_tech,vessel_length))
+
+# Below the recent data with all GSAs (PRCHè QUI PRENDI TUTTE LE GSA? QUESTA COSA PUò DISORIENTARE L'UTENTE...)
+
+(GSAITA_TOT_RECENTDATA_DTS<-RECENTDATA2%>%
+    select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.vessels)%>%
+    filter(Country.name%in%COUNTRY &  Fishing.Technique%in%FT1 & principal.sub.region%in%c("GSA17","GSA18","GSA19","GSA16","GSA10","GSA9","GSA11")))
+
+(GSAITA_TOT_RECENTDATA_PGP1<-RECENTDATA2%>%
+    select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.vessels)%>%
+    filter(Country.name%in%COUNTRY &  Fishing.Technique%in%FT2 & principal.sub.region%in%c("GSA17","GSA18","GSA19","GSA16","GSA10","GSA9","GSA11")))
+
+
+LOA<-c("VL0006","VL0612")
+
+(GSAITA_TOT_RECENTDATA_PGP1<-GSAITA_TOT_RECENTDATA_PGP1%>%
+    filter(Vessel.Length.Category%in%LOA)%>%
+    group_by(Country.name,year,Fishing.Technique,principal.sub.region)%>%
+    summarize(total.vessels=sum(as.numeric(total.vessels))))
+(GSAITA_TOT_RECENTDATA_PGP1$Vessel.Length.Category<-"VL0012")
+
+
+GSA<-c("GSA17","GSA18","GSA19","GSA16","GSA10","GSA9","GSA11")
+FT2= "PGP"
+
+(GSAITA_TOT_RECENTDATA_PGP2<-RECENTDATA2%>%
+    select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.vessels)%>%
+    filter(Country.name%in%COUNTRY &  Fishing.Technique%in%FT2 & principal.sub.region%in%GSA))
+(GSAITA_TOT_RECENTDATA_PGP2<-GSAITA_TOT_RECENTDATA_PGP2%>%filter(Vessel.Length.Category%in%"VL1218"))
+
+(GSAITA_TOT_RECENTDATA<-rbind(GSAITA_TOT_RECENTDATA_DTS,GSAITA_TOT_RECENTDATA_PGP1,GSAITA_TOT_RECENTDATA_PGP2))
+(GSAITA_TOT_RECENTDATA2<-GSAITA_TOT_RECENTDATA%>%arrange(year,Fishing.Technique,Vessel.Length.Category))
+
+(GSAITA_TOT_RECENT_2014_DTS<-GSAITA_TOT_RECENTDATA2%>%
+    filter(year %in%"2014"& Fishing.Technique%in%FT1)%>%
+    group_by(Country.name,year ,Fishing.Technique,Vessel.Length.Category)%>%
+    summarise(total.vessels=sum(as.numeric(total.vessels))))
+
+(GSAITA_TOT_RECENT_2014_PGP<-GSAITA_TOT_RECENTDATA2%>%
+    filter(year%in%"2014"& Fishing.Technique%in%FT2)%>%
+    group_by(Country.name,year ,Fishing.Technique,Vessel.Length.Category)%>%
+    summarise(total.vessels=sum(as.numeric(total.vessels))))
+
+(GSAITA_TOT_RECENT_2014<-rbind(GSAITA_TOT_RECENT_2014_DTS,GSAITA_TOT_RECENT_2014_PGP))
+
+# NOw it is time to calculate the % of the oldest available year. 
+
+(GSA9_3<-GSA9_2%>%filter(Year%in%"2014"))
+(GSA9_3$PROP<-GSA9_3$Vess/GSAITA_TOT_RECENT_2014$total.vessels)
+
+# Back to the old data set
+Years<-c("2008","2009","2010","2011","2012","2013")
+
+(OLD_DATA_3<-OLD_DATA_2%>%filter(supra_reg%in%"AREA37" & year%in%Years))
+(OLD_DATA_3<-OLD_DATA_3%>%arrange(year,fishing_tech,vessel_length))
+
+# A this point we need to create a df of the same size of our time series (six years)
+(newDF<-rbind(GSA9_3,GSA9_3,GSA9_3,GSA9_3,GSA9_3,GSA9_3))
+(OLD_DATA_3$new_vessel<-newDF$PROP*OLD_DATA_3$value)
+
+# Step 3 #===============================================================================
+
+# Now you may add the all old data to the recent data frame
+OLD_DATA_3$Source<-"STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment"
+OLD_DATA_3$GSA<-"GSA9"
+OLD_DATA_3$Month<-0 
+OLD_DATA_3$Unit<-"vess"
+
+(OLD_DATA_4<-OLD_DATA_3[,c(11,4,6,3,12,9,8,10)])
+colnames(OLD_DATA_4)[6]<-"Vess"
+
+# now you need to create the absent 2006 and 2007 data equal to 2008 
+(OLD_DATA_2006<-OLD_DATA_4%>%filter(year%in%"2008"))
+OLD_DATA_2006[,4]<-c(rep("2006",6))
+
+(OLD_DATA_2007<-OLD_DATA_4%>%filter(year%in%"2008"))
+(OLD_DATA_2007[,4]<-c(rep("2007",6)))
+
+# merge all the old data set 
+(OLD_DATA_4<-rbind(OLD_DATA_2006,OLD_DATA_2007,OLD_DATA_4))
+
+OLD_DATA_4_DTS<-OLD_DATA_4%>%filter(fishing_tech%in%FT)
+OLD_DATA_4_DTS$gear<-"OTB"
+(OLD_DATA_4_DTS<-OLD_DATA_4_DTS[,c(1,2,3,9,4,5,6,7,8)]%>%unite("FS",c(GSA:gear), remove = T))
+
+OLD_DATA_4_PGP<-OLD_DATA_4%>%filter(fishing_tech%in%FT2)
+(OLD_DATA_4_PGP<-OLD_DATA_4_PGP%>%unite("FS",c(GSA:vessel_length), remove = T))
+(OLD_DATA_4<-rbind(OLD_DATA_4_DTS,OLD_DATA_4_PGP))
+colnames(OLD_DATA_4)[2]<-"Year"
+colnames(OLD_DATA_4)[5]<-"Unit"
+(BIGDF<-rbind(OLD_DATA_4,GSA9_2))
+(BIGDF<-BIGDF%>%arrange(Year,FS))
+
+write.csv(BIGDF,"D:/Andrea/Desktop/NEW_BEMTool/FINALDF_VESSEL.csv", sep=";", row.names=F) 
+FINALDF<-BIGDF # ATTENTION: you will use this Data frame for some calculation below, do not delete it from your global environment. 
+FINALDF$Year<-as.numeric(FINALDF$Year)
+
+# Step 4 #============================================================================
+# In this last step you have your data frame and you just need to run the loop for creating the Bemtool input csv file
+
+ts<-c(2006:2021)
+trans_year=c(2021)
+
+# start with VESSELS
+(Vess_data=FINALDF)
+Fleet_segments <-  unique(FINALDF$FS) 
+
+(DF1=matrix(0,nrow=12,ncol=length(ts)))
+(colnames(DF1)=ts)
+(rownames(DF1)=seq(1,12,1))
+
+# Fleet_segments[1]
+(Vess_data_temp=Vess_data[Vess_data$FS%in%Fleet_segments[1],])
+
+for (rr in 1:nrow(Vess_data_temp)){
+  
+  year=Vess_data_temp$Year[rr] 
+  month=Vess_data_temp$Month[rr]
+  #unit=Vess_data_temp$Unit[rr]
+  
+  if (month!=0){
+    DF1[rownames(DF1)==month,colnames(DF1)==year]=Vess_data_temp$Vess[rr]
+  } else if (month==0){
+    DF1[,colnames(DF1)==year]=Vess_data_temp$Vess[rr]
+  }  
+  
+}
+
+DF1[,colnames(DF1) %in% trans_year]= DF1[,as.numeric(colnames(DF1)) == (trans_year[1]-1)]
+
+for (fs in Fleet_segments[-1]){
+  
+  print(fs,quote=F)
+  DF_next=matrix(0,nrow=12,ncol=length(ts))
+  colnames(DF_next)=ts
+  rownames(DF_next)=seq(1,12,1)
+  
+  # Fleet_segments[1]
+  Vess_data_temp=Vess_data[Vess_data$FS==fs,]
+  
+  for (rr in 1:nrow(Vess_data_temp)){
+    
+    year=Vess_data_temp$Year[rr] 
+    month=Vess_data_temp$Month[rr]
+    unit=Vess_data_temp$Unit[rr]
+    
+    if (month!=0){
+      DF_next[rownames(DF_next)==month,colnames(DF_next)==year]=Vess_data_temp$Vess[rr]  
+      
+    } else if (month==0){
+      
+      DF_next[,colnames(DF_next)==year]=Vess_data_temp$Vess[rr]  
+    }  
+    
+  }
+  DF_next[,colnames(DF_next) %in% trans_year]= DF_next[,as.numeric(colnames(DF_next)) == (trans_year[1]-1)]
+  
+  DF1=cbind(DF1,DF_next)
+  
+} # ciclo FS
+
+for (f in 1:length(Fleet_segments)){
+  print(Fleet_segments[f])
+  ini=1 +(f-1)*length(ts)
+  fin=(f)*length(ts)
+  if (length(DF1[,ini:fin][which(DF1[,ini:fin]==0)])>0){
+    DF1[,ini:fin][which(DF1[,ini:fin]==0)] = mean(DF1[,ini:fin][which(DF1[,ini:fin]!=0)]) 
+  }
+}
+
+#FirstRow=t(data.frame(rep(ts,length(Fleet_segments))))
+#FirstRow=c("Units: kg",FirstRow)
+
+SecondRow=t(data.frame(rep(Fleet_segments[1],length(ts)))  )
+
+for (fs in Fleet_segments[-1]){
+  print(fs)
+  SecondRow2=t(data.frame(rep(fs,length(ts))))
+  
+  SecondRow=cbind(SecondRow,SecondRow2) 
+  
+}
+
+empty_row=t(data.frame(rep("",length(SecondRow))))
+
+DF_final=(rbind(SecondRow,empty_row,empty_row))
+
+DF_final=rbind(DF_final,as.matrix(DF1))
+
+DF_final= cbind(c(   "casestudy.fleetsegmentcode",
+                     "casestudy.fishingtechnique",
+                     "casestudy.loa",
+                     "casestudy.month1",
+                     "casestudy.month2",
+                     "casestudy.month3",
+                     "casestudy.month4",
+                     "casestudy.month5",
+                     "casestudy.month6",
+                     "casestudy.month7",
+                     "casestudy.month8",
+                     "casestudy.month9",
+                     "casestudy.month10",
+                     "casestudy.month11",
+                     "casestudy.month12"),DF_final)
+
+colnames(DF_final)[1]="Units: number"
+
+write.table(DF_final,"D:/Andrea/Desktop/NEW_BEMTool/number-of-vessels.csv",row.names=F) 
+
+```
