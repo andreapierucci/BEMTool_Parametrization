@@ -67,7 +67,7 @@ S2<-"M. mer1718"
 S3<-"M. bar_1718"
 S4<-"N. nor1718"
 S5<-"P. lon171819"
-  
+
 # The 5 lines below could be more or less and are related to the amounto fo the species present in your Economic output files
 # Please change those accordingly with your data 
 
@@ -182,7 +182,7 @@ data2$employment<-as.numeric(data2$employment)
                                                     tot_landing_S3=mean(tot_landing_S3),
                                                     tot_landing_S4=mean(tot_landing_S4),
                                                     tot_landing_S5=mean(tot_landing_S5),
-                                              
+                                                    
                                                     
                                                     revenues_S1=mean(revenues_S1),
                                                     revenues_S2=mean(revenues_S2),
@@ -198,7 +198,7 @@ data2$employment<-as.numeric(data2$employment)
                                                     tot_var_cost=mean(tot_var_cost),
                                                     tot_landing=mean(tot_landing),
                                                     employment=mean(employment)))
-                                            
+
 (fleet_segments <-c(unique(data$Fleet_segment)))
 
 # Now you need to add the lable
@@ -226,306 +226,75 @@ DF0<-as.data.frame(DF0)
 # you need to play with amount of line only
 
 #fuel_cost
-(DF0[1,1]<-data3[1,22]/(vessels[1,3]*days_at_sea[1,3]))
-(DF0[1,2]<-data3[2,22]/(vessels[2,3]*days_at_sea[2,3]))
-(DF0[1,3]<-data3[3,22]/(vessels[3,3]*days_at_sea[3,3]))
-(DF0[1,4]<-data3[4,22]/(vessels[4,3]*days_at_sea[4,3]))
-(DF0[1,5]<-data3[5,22]/(vessels[5,3]*days_at_sea[5,3]))
-(DF0[1,6]<-data3[6,22]/(vessels[6,3]*days_at_sea[6,3]))
-(DF0[1,7]<-data3[7,22]/(vessels[7,3]*days_at_sea[7,3]))
-(DF0[1,8]<-data3[8,22]/(vessels[8,3]*days_at_sea[8,3]))
-(DF0[1,9]<-data3[9,22]/(vessels[9,3]*days_at_sea[9,3]))
-(DF0[1,10]<-data3[10,22]/(vessels[10,3]*days_at_sea[10,3]))
-(DF0[1,11]<-data3[11,22]/(vessels[11,3]*days_at_sea[11,3]))
-(DF0[1,12]<-data3[12,22]/(vessels[12,3]*days_at_sea[12,3]))
-(DF0[1,13]<-data3[13,22]/(vessels[13,3]*days_at_sea[13,3]))
-(DF0[1,14]<-data3[14,22]/(vessels[14,3]*days_at_sea[14,3]))
-(DF0[1,15]<-data3[15,22]/(vessels[15,3]*days_at_sea[15,3]))
-(DF0[1,16]<-data3[16,22]/(vessels[16,3]*days_at_sea[16,3]))
-(DF0[1,17]<-data3[17,22]/(vessels[17,3]*days_at_sea[17,3]))
-(DF0[1,18]<-data3[18,22]/(vessels[18,3]*days_at_sea[18,3]))
-(DF0[1,19]<-data3[19,22]/(vessels[19,3]*days_at_sea[19,3])) 
-(DF0[1,20]<-data3[20,22]/(vessels[20,3]*days_at_sea[20,3])) 
-(DF0[1,21]<-data3[21,22]/(vessels[21,3]*days_at_sea[21,3]))
-(DF0[1,22]<-data3[22,22]/(vessels[22,3]*days_at_sea[22,3]))
-(DF0[1,23]<-data3[23,22]/(vessels[23,3]*days_at_sea[23,3]))
-(DF0[1,24]<-data3[24,22]/(vessels[24,3]*days_at_sea[24,3]))
+
+#QUESTE SERIE DI RIGHE SONO RIPETITIVE E INUTILI. VANNO SOSTITUITE CON CICLI FOR
+
+for (fs in 1:length(fleet_segments)){
+  (DF0[1,fs]<-data3[fs,22]/(vessels[fs,3]*days_at_sea[fs,3]))
+}
 
 #othervariablecosts_coeff
-(DF0[2,1]<-data3[1,23]/(vessels[1,3]*days_at_sea[1,3]))
-(DF0[2,2]<-data3[2,23]/(vessels[2,3]*days_at_sea[2,3]))
-(DF0[2,3]<-data3[3,23]/(vessels[3,3]*days_at_sea[3,3]))
-(DF0[2,4]<-data3[4,23]/(vessels[4,3]*days_at_sea[4,3]))
-(DF0[2,5]<-data3[5,23]/(vessels[5,3]*days_at_sea[5,3]))
-(DF0[2,6]<-data3[6,23]/(vessels[6,3]*days_at_sea[6,3]))
-(DF0[2,7]<-data3[7,23]/(vessels[7,3]*days_at_sea[7,3]))
-(DF0[2,8]<-data3[8,23]/(vessels[8,3]*days_at_sea[8,3]))
-(DF0[2,9]<-data3[9,23]/(vessels[9,3]*days_at_sea[9,3]))
-(DF0[2,10]<-data3[10,23]/(vessels[10,3]*days_at_sea[10,3]))
-(DF0[2,11]<-data3[11,23]/(vessels[11,3]*days_at_sea[11,3]))
-(DF0[2,12]<-data3[12,23]/(vessels[12,3]*days_at_sea[12,3]))
-(DF0[2,13]<-data3[13,23]/(vessels[13,3]*days_at_sea[13,3]))
-(DF0[2,14]<-data3[14,23]/(vessels[14,3]*days_at_sea[14,3]))
-(DF0[2,15]<-data3[15,23]/(vessels[15,3]*days_at_sea[15,3]))
-(DF0[2,16]<-data3[16,23]/(vessels[16,3]*days_at_sea[16,3]))
-(DF0[2,17]<-data3[17,23]/(vessels[17,3]*days_at_sea[17,3]))
-(DF0[2,18]<-data3[18,23]/(vessels[18,3]*days_at_sea[18,3]))
-(DF0[2,19]<-data3[19,23]/(vessels[19,3]*days_at_sea[19,3]))
-(DF0[2,20]<-data3[20,23]/(vessels[20,3]*days_at_sea[20,3]))
-(DF0[2,21]<-data3[21,23]/(vessels[21,3]*days_at_sea[21,3]))
-(DF0[2,22]<-data3[22,23]/(vessels[22,3]*days_at_sea[22,3]))
-(DF0[2,23]<-data3[23,23]/(vessels[23,3]*days_at_sea[23,3]))
-(DF0[2,24]<-data3[24,23]/(vessels[24,3]*days_at_sea[24,3]))
 
+for (fs in 1:length(fleet_segments)){
+  (DF0[2,fs]<-data3[fs,23]/(vessels[fs,3]*days_at_sea[fs,3]))
+}
 
 #maintenancecosts_coeff
-(DF0[3,1]<-data3[1,6]/GT[1,3])
-(DF0[3,2]<-data3[2,6]/GT[2,3])
-(DF0[3,3]<-data3[3,6]/GT[3,3])
-(DF0[3,4]<-data3[4,6]/GT[4,3])
-(DF0[3,5]<-data3[5,6]/GT[5,3])
-(DF0[3,6]<-data3[6,6]/GT[6,3])
-(DF0[3,7]<-data3[7,6]/GT[7,3])
-(DF0[3,8]<-data3[8,6]/GT[8,3])
-(DF0[3,9]<-data3[9,6]/GT[9,3])
-(DF0[3,10]<-data3[10,6]/GT[10,3])
-(DF0[3,11]<-data3[11,6]/GT[11,3])
-(DF0[3,12]<-data3[12,6]/GT[12,3])
-(DF0[3,13]<-data3[13,6]/GT[13,3])
-(DF0[3,14]<-data3[14,6]/GT[14,3])
-(DF0[3,15]<-data3[15,6]/GT[15,3])
-(DF0[3,16]<-data3[16,6]/GT[16,3])
-(DF0[3,17]<-data3[17,6]/GT[17,3])
-(DF0[3,18]<-data3[18,6]/GT[18,3])
-(DF0[3,19]<-data3[19,6]/GT[19,3])
-(DF0[3,20]<-data3[20,6]/GT[20,3])
-(DF0[3,21]<-data3[21,6]/GT[21,3])
-(DF0[3,22]<-data3[22,6]/GT[22,3])
-(DF0[3,23]<-data3[23,6]/GT[23,3])
-(DF0[3,24]<-data3[24,6]/GT[24,3])
 
-
-
+for (fs in 1:length(fleet_segments)){
+  (DF0[3,fs]<-data3[fs,6]/GT[fs,3])
+}
 
 #otherfixed_cost
-(DF0[4,1]<-data3[1,7]/GT[1,3])
-(DF0[4,2]<-data3[2,7]/GT[2,3])
-(DF0[4,3]<-data3[3,7]/GT[3,3])
-(DF0[4,4]<-data3[4,7]/GT[4,3])
-(DF0[4,5]<-data3[5,7]/GT[5,3])
-(DF0[4,6]<-data3[6,7]/GT[6,3])
-(DF0[4,7]<-data3[7,7]/GT[7,3])
-(DF0[4,8]<-data3[8,7]/GT[8,3])
-(DF0[4,9]<-data3[9,7]/GT[9,3])
-(DF0[4,10]<-data3[10,7]/GT[10,3])
-(DF0[4,11]<-data3[11,7]/GT[11,3])
-(DF0[4,12]<-data3[12,7]/GT[12,3])
-(DF0[4,13]<-data3[13,7]/GT[13,3])
-(DF0[4,14]<-data3[14,7]/GT[14,3])
-(DF0[4,15]<-data3[15,7]/GT[15,3])
-(DF0[4,16]<-data3[16,7]/GT[16,3])
-(DF0[4,17]<-data3[17,7]/GT[17,3])
-(DF0[4,18]<-data3[18,7]/GT[18,3])
-(DF0[4,19]<-data3[19,7]/GT[19,3])
-(DF0[4,20]<-data3[20,7]/GT[20,3])
-(DF0[4,21]<-data3[21,7]/GT[21,3])
-(DF0[4,22]<-data3[22,7]/GT[22,3])
-(DF0[4,23]<-data3[23,7]/GT[23,3])
-(DF0[4,24]<-data3[24,7]/GT[24,3])
 
+for (fs in 1:length(fleet_segments)){
+  (DF0[4,fs]<-data3[fs,7]/GT[fs,3])
+}
 
 #depreciationcosts_coeff
-(DF0[5,1]<-data3[1,3]/GT[1,3])
-(DF0[5,2]<-data3[2,3]/GT[2,3])
-(DF0[5,3]<-data3[3,3]/GT[3,3])
-(DF0[5,4]<-data3[4,3]/GT[4,3])
-(DF0[5,5]<-data3[5,3]/GT[5,3])
-(DF0[5,6]<-data3[6,3]/GT[6,3])
-(DF0[5,7]<-data3[7,3]/GT[7,3])
-(DF0[5,8]<-data3[8,3]/GT[8,3])
-(DF0[5,9]<-data3[9,3]/GT[9,3])
-(DF0[5,10]<-data3[10,3]/GT[10,3])
-(DF0[5,11]<-data3[11,3]/GT[11,3])
-(DF0[5,12]<-data3[12,3]/GT[12,3])
-(DF0[5,13]<-data3[13,3]/GT[13,3])
-(DF0[5,14]<-data3[14,3]/GT[14,3])
-(DF0[5,15]<-data3[15,3]/GT[15,3])
-(DF0[5,16]<-data3[16,3]/GT[16,3])
-(DF0[5,17]<-data3[17,3]/GT[17,3])
-(DF0[5,18]<-data3[18,3]/GT[18,3])
-(DF0[5,19]<-data3[19,3]/GT[19,3])
-(DF0[5,20]<-data3[20,3]/GT[20,3])
-(DF0[5,21]<-data3[21,3]/GT[21,3])
-(DF0[5,22]<-data3[22,3]/GT[22,3])
-(DF0[5,23]<-data3[23,3]/GT[23,3])
-(DF0[5,24]<-data3[24,3]/GT[24,3])
 
-
+for (fs in 1:length(fleet_segments)){
+  (DF0[5,fs]<-data3[fs,3]/GT[fs,3])
+}
 
 #opportunitycosts_coeff
-(DF0[6,1]<-data3[1,2]/GT[1,3])
-(DF0[6,2]<-data3[2,2]/GT[2,3])
-(DF0[6,3]<-data3[3,2]/GT[3,3])
-(DF0[6,4]<-data3[4,2]/GT[4,3])
-(DF0[6,5]<-data3[5,2]/GT[5,3])
-(DF0[6,6]<-data3[6,2]/GT[6,3])
-(DF0[6,7]<-data3[7,2]/GT[7,3])
-(DF0[6,8]<-data3[8,2]/GT[8,3])
-(DF0[6,9]<-data3[9,2]/GT[9,3])
-(DF0[6,10]<-data3[10,2]/GT[10,3])
-(DF0[6,11]<-data3[11,2]/GT[11,3])
-(DF0[6,12]<-data3[12,2]/GT[12,3])
-(DF0[6,13]<-data3[13,2]/GT[13,3])
-(DF0[6,14]<-data3[14,2]/GT[14,3])
-(DF0[6,15]<-data3[15,2]/GT[15,3])
-(DF0[6,16]<-data3[16,2]/GT[16,3])
-(DF0[6,17]<-data3[17,2]/GT[17,3])
-(DF0[6,18]<-data3[18,2]/GT[18,3])
-(DF0[6,19]<-data3[19,2]/GT[19,3])
-(DF0[6,20]<-data3[20,2]/GT[20,3])
-(DF0[6,21]<-data3[21,2]/GT[21,3])
-(DF0[6,22]<-data3[22,2]/GT[22,3])
-(DF0[6,23]<-data3[23,2]/GT[23,3])
-(DF0[6,24]<-data3[24,2]/GT[24,3])
 
-
-
+for (fs in 1:length(fleet_segments)){
+  (DF0[6,fs]<-data3[fs,2]/GT[fs,3])
+}
+			 
 #correc_factor_for_land = tot_landing /  sum( tot_landing_S1 + tot_landing_S2 + tot_landing_S3 ...)
-(DF0[7,1]<-data3[1,25]/sum(data3[1,10],data3[1,11],data3[1,12],data3[1,13],data3[1,14]))
-(DF0[7,2]<-data3[2,25]/sum(data3[2,10],data3[2,11],data3[2,12],data3[2,13],data3[2,14]))
-(DF0[7,3]<-data3[3,25]/sum(data3[3,10],data3[3,11],data3[3,12],data3[3,13],data3[3,14]))
-(DF0[7,4]<-data3[4,25]/sum(data3[4,10],data3[4,11],data3[4,12],data3[4,13],data3[4,14]))
-(DF0[7,5]<-data3[5,25]/sum(data3[5,10],data3[5,11],data3[5,12],data3[5,13],data3[5,14]))
-(DF0[7,6]<-data3[6,25]/sum(data3[6,10],data3[6,11],data3[6,12],data3[6,13],data3[6,14]))
-(DF0[7,7]<-data3[7,25]/sum(data3[7,10],data3[7,11],data3[7,12],data3[7,13],data3[7,14]))
-(DF0[7,8]<-data3[8,25]/sum(data3[8,10],data3[8,11],data3[8,12],data3[8,13],data3[8,14]))
-(DF0[7,9]<-data3[9,25]/sum(data3[9,10],data3[9,11],data3[9,12],data3[9,13],data3[9,14]))
-(DF0[7,10]<-data3[10,25]/sum(data3[10,10],data3[10,11],data3[10,12],data3[10,13],data3[10,14]))
-(DF0[7,11]<-data3[11,25]/sum(data3[11,10],data3[11,11],data3[11,12],data3[11,13],data3[11,14]))
-(DF0[7,12]<-data3[12,25]/sum(data3[12,10],data3[12,11],data3[12,12],data3[12,13],data3[12,14]))
-(DF0[7,13]<-data3[13,25]/sum(data3[13,10],data3[13,11],data3[13,12],data3[13,13],data3[13,14]))
-(DF0[7,14]<-data3[14,25]/sum(data3[14,10],data3[14,11],data3[14,12],data3[14,13],data3[14,14]))
-(DF0[7,15]<-data3[15,25]/sum(data3[15,10],data3[15,11],data3[15,12],data3[15,13],data3[15,14]))
-(DF0[7,16]<-data3[16,25]/sum(data3[16,10],data3[16,11],data3[16,12],data3[16,13],data3[16,14]))
-(DF0[7,17]<-data3[17,25]/sum(data3[17,10],data3[17,11],data3[17,12],data3[17,13],data3[17,14]))
-(DF0[7,18]<-data3[18,25]/sum(data3[18,10],data3[18,11],data3[18,12],data3[18,13],data3[18,14]))
-(DF0[7,19]<-data3[19,25]/sum(data3[19,10],data3[19,11],data3[19,12],data3[19,13],data3[19,14]))
-(DF0[7,20]<-data3[20,25]/sum(data3[20,10],data3[20,11],data3[20,12],data3[20,13],data3[20,14]))
-(DF0[7,21]<-data3[21,25]/sum(data3[21,10],data3[21,11],data3[21,12],data3[21,13],data3[21,14]))
-(DF0[7,22]<-data3[22,25]/sum(data3[22,10],data3[22,11],data3[22,12],data3[22,13],data3[22,14]))
-(DF0[7,23]<-data3[23,25]/sum(data3[23,10],data3[23,11],data3[23,12],data3[23,13],data3[23,14]))
-(DF0[7,24]<-data3[24,25]/sum(data3[24,10],data3[24,11],data3[24,12],data3[24,13],data3[24,14]))
 
+for (fs in 1:length(fleet_segments)){
+  (DF0[7,fs]<-data3[fs,25]/sum(data3[fs,10],data3[fs,11],data3[fs,12],data3[fs,13],data3[fs,14]))
+}
+				 
 #correc_factor_for_rev = tot_revenues_landing / sum(revenues_S1 + revenues_S2 + revenues_S3 ...)
-
-(DF0[8,1]<-data3[1,20]/sum(data3[1,15],data3[1,16],data3[1,17],data3[1,18],data3[1,19]))
-(DF0[8,2]<-data3[2,20]/sum(data3[2,15],data3[2,16],data3[2,17],data3[2,18],data3[2,19]))
-(DF0[8,3]<-data3[3,20]/sum(data3[3,15],data3[3,16],data3[3,17],data3[3,18],data3[3,19]))
-(DF0[8,4]<-data3[4,20]/sum(data3[4,15],data3[4,16],data3[4,17],data3[4,18],data3[4,19]))
-(DF0[8,5]<-data3[5,20]/sum(data3[5,15],data3[5,16],data3[5,17],data3[5,18],data3[5,19]))
-(DF0[8,6]<-data3[6,20]/sum(data3[6,15],data3[6,16],data3[6,17],data3[6,18],data3[6,19]))
-(DF0[8,7]<-data3[7,20]/sum(data3[7,15],data3[7,16],data3[7,17],data3[7,18],data3[7,19]))
-(DF0[8,8]<-data3[8,20]/sum(data3[8,15],data3[8,16],data3[8,17],data3[8,18],data3[8,19]))
-(DF0[8,9]<-data3[9,20]/sum(data3[9,15],data3[9,16],data3[9,17],data3[9,18],data3[9,19]))
-(DF0[8,10]<-data3[10,20]/sum(data3[10,15],data3[10,16],data3[10,17],data3[10,18],data3[10,19]))
-(DF0[8,11]<-data3[11,20]/sum(data3[11,15],data3[11,16],data3[11,17],data3[11,18],data3[11,19]))
-(DF0[8,12]<-data3[12,20]/sum(data3[12,15],data3[12,16],data3[12,17],data3[12,18],data3[12,19]))
-(DF0[8,13]<-data3[13,20]/sum(data3[13,15],data3[13,16],data3[13,17],data3[13,18],data3[13,19]))
-(DF0[8,14]<-data3[14,20]/sum(data3[14,15],data3[14,16],data3[14,17],data3[14,18],data3[14,19]))
-(DF0[8,15]<-data3[15,20]/sum(data3[15,15],data3[15,16],data3[15,17],data3[15,18],data3[15,19]))
-(DF0[8,16]<-data3[16,20]/sum(data3[16,15],data3[16,16],data3[16,17],data3[16,18],data3[16,19]))
-(DF0[8,17]<-data3[17,20]/sum(data3[17,15],data3[17,16],data3[17,17],data3[17,18],data3[17,19]))
-(DF0[8,18]<-data3[18,20]/sum(data3[18,15],data3[18,16],data3[18,17],data3[18,18],data3[18,19]))
-(DF0[8,19]<-data3[19,20]/sum(data3[19,15],data3[19,16],data3[19,17],data3[19,18],data3[19,19]))
-(DF0[8,20]<-data3[20,20]/sum(data3[20,15],data3[20,16],data3[20,17],data3[20,18],data3[20,19]))
-(DF0[8,21]<-data3[21,20]/sum(data3[21,15],data3[21,16],data3[21,17],data3[21,18],data3[21,19]))
-(DF0[8,22]<-data3[22,20]/sum(data3[22,15],data3[22,16],data3[22,17],data3[22,18],data3[22,19]))
-(DF0[8,23]<-data3[23,20]/sum(data3[23,15],data3[23,16],data3[23,17],data3[23,18],data3[23,19]))
-(DF0[8,24]<-data3[24,20]/sum(data3[24,15],data3[24,16],data3[24,17],data3[24,18],data3[24,19]))
+				 
+for (fs in 1:length(fleet_segments)){
+  (DF0[8,fs]<-data3[fs,20]/sum(data3[fs,15],data3[fs,16],data3[fs,17],data3[fs,18],data3[fs,19]))
+}
 
 #value_of_single_vessel = capital_value / N_vessels
-(DF0[9,1]<-data3[1,4]/vessels[1,3])
-(DF0[9,2]<-data3[2,4]/vessels[2,3])
-(DF0[9,3]<-data3[3,4]/vessels[3,3])
-(DF0[9,4]<-data3[4,4]/vessels[4,3])
-(DF0[9,5]<-data3[5,4]/vessels[5,3])
-(DF0[9,6]<-data3[6,4]/vessels[6,3])
-(DF0[9,7]<-data3[7,4]/vessels[7,3])
-(DF0[9,8]<-data3[8,4]/vessels[8,3])
-(DF0[9,9]<-data3[9,4]/vessels[9,3])
-(DF0[9,10]<-data3[10,4]/vessels[10,3])
-(DF0[9,11]<-data3[11,4]/vessels[11,3])
-(DF0[9,12]<-data3[12,4]/vessels[12,3])
-(DF0[9,13]<-data3[13,4]/vessels[13,3])
-(DF0[9,14]<-data3[14,4]/vessels[14,3])
-(DF0[9,15]<-data3[15,4]/vessels[15,3])
-(DF0[9,16]<-data3[16,4]/vessels[16,3])
-(DF0[9,17]<-data3[17,4]/vessels[17,3])
-(DF0[9,18]<-data3[18,4]/vessels[18,3])
-(DF0[9,19]<-data3[19,4]/vessels[19,3])
-(DF0[9,20]<-data3[20,4]/vessels[20,3])
-(DF0[9,21]<-data3[21,4]/vessels[21,3])
-(DF0[9,22]<-data3[22,4]/vessels[22,3])
-(DF0[9,23]<-data3[23,4]/vessels[23,3])
-(DF0[9,24]<-data3[24,4]/vessels[24,3])
 
-
+for (fs in 1:length(fleet_segments)){
+  (DF0[9,fs]<-data3[fs,4]/vessels[fs,3])
+}
+			 
 #average_employees_per_vessel = employment / N_vessels
-(DF0[10,1]<-data3[1,26]/vessels[1,3])
-(DF0[10,2]<-data3[2,26]/vessels[2,3])
-(DF0[10,3]<-data3[3,26]/vessels[3,3])
-(DF0[10,4]<-data3[4,26]/vessels[4,3])
-(DF0[10,5]<-data3[5,26]/vessels[5,3])
-(DF0[10,6]<-data3[6,26]/vessels[6,3])
-(DF0[10,7]<-data3[7,26]/vessels[7,3])
-(DF0[10,8]<-data3[8,26]/vessels[8,3])
-(DF0[10,9]<-data3[9,26]/vessels[9,3])
-(DF0[10,10]<-data3[10,26]/vessels[10,3])
-(DF0[10,11]<-data3[11,26]/vessels[11,3])
-(DF0[10,12]<-data3[12,26]/vessels[12,3])
-(DF0[10,13]<-data3[13,26]/vessels[13,3])
-(DF0[10,14]<-data3[14,26]/vessels[14,3])
-(DF0[10,15]<-data3[15,26]/vessels[15,3])
-(DF0[10,16]<-data3[16,26]/vessels[16,3])
-(DF0[10,17]<-data3[17,26]/vessels[17,3])
-(DF0[10,18]<-data3[18,26]/vessels[18,3])
-(DF0[10,19]<-data3[19,26]/vessels[19,3])
-(DF0[10,20]<-data3[20,26]/vessels[20,3])
-(DF0[10,21]<-data3[21,26]/vessels[21,3])
-(DF0[10,22]<-data3[22,26]/vessels[22,3])
-(DF0[10,23]<-data3[23,26]/vessels[23,3])
-(DF0[10,24]<-data3[24,26]/vessels[24,3])
 
+for (fs in 1:length(fleet_segments)){
+  (DF0[10,fs]<-data3[fs,26]/vessels[fs,3])
+}
 
 #crew_share = labour_cost / (tot_revenues_landing - tot_var_cost)
 
-(DF0[11,1]<-data3[1,9]/(data3[1,20]-data3[1,24]))
-(DF0[11,2]<-data3[2,9]/(data3[2,20]-data3[2,24]))
-(DF0[11,3]<-data3[3,9]/(data3[3,20]-data3[3,24]))
-(DF0[11,4]<-data3[4,9]/(data3[4,20]-data3[4,24]))
-(DF0[11,5]<-data3[5,9]/(data3[5,20]-data3[5,24]))
-(DF0[11,6]<-data3[6,9]/(data3[6,20]-data3[6,24]))
-(DF0[11,7]<-data3[7,9]/(data3[7,20]-data3[7,24]))
-(DF0[11,8]<-data3[8,9]/(data3[8,20]-data3[8,24]))
-(DF0[11,9]<-data3[9,9]/(data3[9,20]-data3[9,24]))
-(DF0[11,10]<-data3[10,9]/(data3[10,20]-data3[10,24]))
-(DF0[11,11]<-data3[11,9]/(data3[11,20]-data3[11,24]))
-(DF0[11,12]<-data3[12,9]/(data3[12,20]-data3[12,24]))
-(DF0[11,13]<-data3[13,9]/(data3[13,20]-data3[13,24]))
-(DF0[11,14]<-data3[14,9]/(data3[14,20]-data3[14,24]))
-(DF0[11,15]<-data3[15,9]/(data3[15,20]-data3[15,24]))
-(DF0[11,16]<-data3[16,9]/(data3[16,20]-data3[16,24]))
-(DF0[11,17]<-data3[17,9]/(data3[17,20]-data3[17,24]))
-(DF0[11,18]<-data3[18,9]/(data3[18,20]-data3[18,24]))
-(DF0[11,19]<-data3[19,9]/(data3[19,20]-data3[19,24]))
-(DF0[11,20]<-data3[20,9]/(data3[20,20]-data3[20,24]))
-(DF0[11,21]<-data3[21,9]/(data3[21,20]-data3[21,24]))
-(DF0[11,22]<-data3[22,9]/(data3[22,20]-data3[22,24]))
-(DF0[11,23]<-data3[23,9]/(data3[23,20]-data3[23,24]))
-(DF0[11,24]<-data3[24,9]/(data3[24,20]-data3[24,24]))
+for (fs in 1:length(fleet_segments)){
+  (DF0[11,fs]<-data3[fs,9]/(data3[fs,20]-data3[fs,24]))
+}	 
 
 # Please add your directory 
 
-write.csv2(DF0,"C.../economic_values.csv")
+write.csv(DF0,"D:/Andrea/Desktop/economic_values.csv")
 
 ```
