@@ -1,3 +1,17 @@
+---
+title: "5) BEMTool Discard Data"
+author: "Andrea Pierucci and Isabella Bitetto"
+date: '2022-03-25'
+output:
+  #bookdown::pdf_book:
+  pdf_document: default
+  #html_document: default
+header-includes:
+    - \usepackage{ragged2e}
+    - \usepackage{multirow}
+    - \usepackage{setspace}\doublespacing
+---
+
 ```{r}
 # Below the lines for the public FDI available data from 2015 to 2019 
 # You should first load the catch data for the available years.
@@ -217,9 +231,6 @@ colnames(UPDATE_FULL_DF)[1]<-"year"
 
 (UPDATE_FULL_DF_2014<-UPDATE_FULL_DF_2014%>%arrange(year,fleet_segment))
 
-#(UPDATE_FULL_DF_2014$PERC<-UPDATE_FULL_DF_2014$total_discards/sum(UPDATE_FULL_DF_2014$total_discards))
-
-
 (UPDATE_FULL_DF_2014_2<-UPDATE_FULL_DF_2014%>%separate(col=fleet_segment, into=c("A","B","C","D"), sep="_"))
 
 # % DTS GSA 10 
@@ -399,6 +410,6 @@ for(n in 1 : length(segs)){
 (Discard_data<-df0)
 
 # Please add your directory and save your file in csv format in your INPUT folder. 
-write.table(Discard_data,"D:/Andrea/Desktop/NEW_BEMTool/Discard_data.csv",sep=";",row.names=F)
+write.table(Discard_data,"...../Discard_data.csv",sep=";",row.names=F)
 
 ```
