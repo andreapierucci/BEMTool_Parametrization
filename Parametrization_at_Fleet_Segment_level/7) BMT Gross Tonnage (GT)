@@ -1,3 +1,17 @@
+---
+title: "7) BEMTool Gross Tonnage (GT)"
+author: "Andrea Pierucci and Isabella Bitetto"
+date: '2022-03-25'
+output:
+  #bookdown::pdf_book:
+  pdf_document: default
+  #html_document: default
+header-includes:
+    - \usepackage{ragged2e}
+    - \usepackage{multirow}
+    - \usepackage{setspace}\doublespacing
+---
+
 ```{r}
 # Packages needed 
 
@@ -16,10 +30,11 @@ library(tidyverse)
 COUNTRY<-"Italy"
 LOA<-c("VL0612" ,"VL1218", "VL1824", "VL2440")
 FT1<-"DTS"
+GSA<-c("GSA9","GSA17","GSA18","GSA19","GSA16","GSA10","GSA11")
 
 (GSA9_2_A_GT<-RECENTDATA2%>% 
     select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.GT)%>%
-    filter(Country.name%in%COUNTRY &  Fishing.Technique%in%FT1 & Vessel.Length.Category%in%LOA & principal.sub.region%in%"GSA9"))
+    filter(Country.name%in%COUNTRY &  Fishing.Technique%in%FT1 & Vessel.Length.Category%in%LOA & principal.sub.region%in%GSA[1]))
 
 # I need to group the VL0006 with VL0612 as VL0012. I did the same in the previous script. 
 # This aggregation is arbitrary and you may perform other LOA aggregation
@@ -29,14 +44,14 @@ FT2<-"PGP"
 
 (GSA9_2_B1_GT<-RECENTDATA2%>%
     select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.GT)%>%
-    filter(Country.name%in%COUNTRY &  Fishing.Technique%in%FT2 & Vessel.Length.Category%in%c("VL0006","VL0612") & principal.sub.region%in%"GSA9")%>%
+    filter(Country.name%in%COUNTRY &  Fishing.Technique%in%FT2 & Vessel.Length.Category%in%c("VL0006","VL0612") & principal.sub.region%in%GSA[1])%>%
     group_by(Country.name,year,Fishing.Technique,principal.sub.region)%>%
     summarise(total.GT=sum(as.numeric(total.GT))))
 GSA9_2_B1_GT$Vessel.Length.Category<-"VL0012"
 
 (GSA9_2_B2_GT<-RECENTDATA2%>%
     select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.GT)%>%
-    filter(Country.name%in%COUNTRY &  Fishing.Technique%in%FT2 & Vessel.Length.Category%in%c("VL1218") & principal.sub.region%in%"GSA9"))
+    filter(Country.name%in%COUNTRY &  Fishing.Technique%in%FT2 & Vessel.Length.Category%in%c("VL1218") & principal.sub.region%in%GSA[1]))
 
 (GSA9_2_GT<-rbind(GSA9_2_A_GT,GSA9_2_B1_GT,GSA9_2_B2_GT))
 GSA9_2_GT$Month<-0
@@ -63,14 +78,12 @@ GSA9_2_GT$Source<-"FDI_capacity_by_country"
 
 # As introduced above, now you may take all the GSAs of your Country in the 2014 and calculate the % of your single GSA respect to the total for each fleet segment back in time
 
-GSA<-c("GSA9","GSA17","GSA18","GSA19","GSA16","GSA10","GSA11")
-
 (ALLGSAOTB<-RECENTDATA2%>%
-   select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.GT)%>%
-   filter(Country.name%in%COUNTRY & year%in%"2014" & Fishing.Technique%in%FT1 & Vessel.Length.Category%in%LOA & principal.sub.region%in%GSA))
+    select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.GT)%>%
+    filter(Country.name%in%COUNTRY & year%in%"2014" & Fishing.Technique%in%FT1 & Vessel.Length.Category%in%LOA & principal.sub.region%in%GSA))
 (ALLGSAOTB$BIGTOTAL<-sum(as.numeric(ALLGSAOTB$total.GT)))
 (ALLGSAOTB$PERC<-as.numeric(ALLGSAOTB$total.GT)/as.numeric(ALLGSAOTB$BIGTOTAL))
-(ALLGSAOTB<-ALLGSAOTB%>%filter(principal.sub.region%in%"GSA9"))
+(ALLGSAOTB<-ALLGSAOTB%>%filter(principal.sub.region%in%GSA[1]))
 
 # The two lines below are an example for grouping part of the LOA PGP ( VL006 + VL0612) and calculate the % respect to the total 
 
@@ -81,13 +94,13 @@ GSA<-c("GSA9","GSA17","GSA18","GSA19","GSA16","GSA10","GSA11")
 ALLGSAPGP_A$Vessel.Length.Category<-"VL0012"
 (ALLGSAPGP_A$BIGTOTAL<-sum(ALLGSAPGP_A$total.GT))
 ALLGSAPGP_A$PERC<-as.numeric(ALLGSAPGP_A$total.GT)/as.numeric(ALLGSAPGP_A$BIGTOTAL)
-(ALLGSAPGP_A<-ALLGSAPGP_A%>%filter(principal.sub.region%in%"GSA9"))
+(ALLGSAPGP_A<-ALLGSAPGP_A%>%filter(principal.sub.region%in%GSA[1]))
 
 (ALLGSAPGP_B<-RECENTDATA2%>%select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.GT)%>%
     filter(Country.name%in%COUNTRY & year%in%"2014" & Fishing.Technique%in%FT2 & Vessel.Length.Category%in%"VL1218" & principal.sub.region%in%GSA))
 (ALLGSAPGP_B$BIGTOTAL<-sum(as.numeric(ALLGSAPGP_B$total.GT)))
 ALLGSAPGP_B$PERC<-as.numeric(ALLGSAPGP_B$total.GT)/as.numeric(ALLGSAPGP_B$BIGTOTAL)
-(ALLGSAPGP_B<-ALLGSAPGP_B%>%filter(principal.sub.region%in%"GSA9"))
+(ALLGSAPGP_B<-ALLGSAPGP_B%>%filter(principal.sub.region%in%GSA[1]))
 (ALLGSAPGP<-rbind(ALLGSAOTB,ALLGSAPGP_A,ALLGSAPGP_B))
 (ALLGSAPGP<-ALLGSAPGP%>%arrange(year,Fishing.Technique,Vessel.Length.Category))  # HERE are the percentage I need to apply to the OLD data set where the GSA level is absent
 
@@ -103,18 +116,20 @@ dir<-"D:/Andrea/Desktop/NEW_BEMTool/STECF_21-08_EU_Fleet_Economic_and_Transversa
 
 # Below we grouped all the GSA. Please check if there are some missing years or fleets segments 
 
+CC<-"ITA"
+
 (OLD_DATA_GT_DTS<-OLD_DATA_GT%>%
     select(country_code,year,fishing_tech,vessel_length,variable_code,value,supra_reg)%>%
-    filter(country_code%in%"ITA", variable_code%in%"totgt" & fishing_tech%in%FT1 & supra_reg %in%"AREA37" & vessel_length%in%LOA ))
+    filter(country_code%in%CC, variable_code%in%"totgt" & fishing_tech%in%FT1 & supra_reg %in%"AREA37" & vessel_length%in%LOA ))
 (OLD_DATA_GT_PGP_1<-OLD_DATA_GT%>%
     select(country_code,year,fishing_tech,vessel_length,variable_code,value,supra_reg)%>%
-    filter(country_code%in%"ITA", variable_code%in%"totgt" & fishing_tech%in%FT2 & supra_reg %in%"AREA37" & vessel_length%in%c("VL0006" ,"VL0612"))%>%
+    filter(country_code%in%CC, variable_code%in%"totgt" & fishing_tech%in%FT2 & supra_reg %in%"AREA37" & vessel_length%in%c("VL0006" ,"VL0612"))%>%
     group_by(country_code,year,fishing_tech,variable_code,supra_reg)%>%
     summarise(value=sum(as.numeric(value))))
 (OLD_DATA_GT_PGP_1$vessel_length<-"VL0012")
 (OLD_DATA_GT_PGP_2<-OLD_DATA_GT%>%
     select(country_code,year,fishing_tech,vessel_length,variable_code,value,supra_reg)%>%
-    filter(country_code%in%"ITA", variable_code%in%"totgt" & fishing_tech%in%FT2 & supra_reg%in%"AREA37" & vessel_length%in%"VL1218"))
+    filter(country_code%in%CC, variable_code%in%"totgt" & fishing_tech%in%FT2 & supra_reg%in%"AREA37" & vessel_length%in%"VL1218"))
 (OLD_DATA_GT<-rbind(OLD_DATA_GT_DTS,OLD_DATA_GT_PGP_1,OLD_DATA_GT_PGP_2))
 (OLD_DATA_GT<-OLD_DATA_GT%>%arrange(year,fishing_tech,vessel_length))
 (OLD_DATA_GT$PERC<-rep(ALLGSAPGP$PERC,9))
@@ -145,18 +160,18 @@ Years<-c("2008","2009","2010","2011","2012","2013")
 (OLD_DATA_GT4NODU_PGP<-OLD_DATA_GT4%>%filter(fishing_tech%in%FT2 & vessel_length%in%c("VL0012","VL1218")))
 
 (OLD_DATA_GT4NODU_DTS$gear<-"OTB")
-(OLD_DATA_GT4NODU_DTS$GSA<-"GSA9")
+(OLD_DATA_GT4NODU_DTS$GSA<-GSA[1])
 (OLD_DATA_GT4NODU_DTS$Month<-0)
 (OLD_DATA_GT4NODU_DTS$Unit<-"TotalGT")
 (OLD_DATA_GT4NODU_DTS$Source<-"STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment.xlsx")
 
 (OLD_DATA_GT4DUP_DTS$gear<-"OTB")
-(OLD_DATA_GT4DUP_DTS$GSA<-"GSA9")
+(OLD_DATA_GT4DUP_DTS$GSA<-GSA[1])
 (OLD_DATA_GT4DUP_DTS$Month<-0)
 (OLD_DATA_GT4DUP_DTS$Unit<-"TotalGT")
 (OLD_DATA_GT4DUP_DTS$Source<-"STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment.xlsx")
 
-(OLD_DATA_GT4NODU_PGP$GSA<-"GSA9")
+(OLD_DATA_GT4NODU_PGP$GSA<-GSA[1])
 (OLD_DATA_GT4NODU_PGP$Month<-0)
 (OLD_DATA_GT4NODU_PGP$Unit<-"TotalGT")
 (OLD_DATA_GT4NODU_PGP$Source<-"STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment.xlsx")
@@ -363,6 +378,5 @@ DF_final= cbind(c(     "casestudy.fleetsegmentcode",
 
 colnames(DF_final)[1]="Units: GT"
 
-write.table(DF_final,"D:/Andrea/Desktop/NEW_BEMTool/GT.csv",sep=";",row.names=F)      
-
+write.table(DF_final,"D:/Andrea/Desktop/NEW_BEMTool/GT.csv",sep=";",row.names=F)
 ```
