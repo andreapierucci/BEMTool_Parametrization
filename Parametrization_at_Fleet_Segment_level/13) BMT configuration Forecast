@@ -1,3 +1,17 @@
+---
+title: "13) BEMTool configuration Forecast"
+author: "Andrea Pierucci and Isabella Bitetto"
+date: '2022-03-25'
+output:
+  #bookdown::pdf_book:
+  pdf_document: default
+  #html_document: default
+header-includes:
+    - \usepackage{ragged2e}
+    - \usepackage{multirow}
+    - \usepackage{setspace}\doublespacing
+---
+
 ```{r}
 
 library(tidyverse)
@@ -293,8 +307,7 @@ for (fs in 1:length(fleet_segments)){
   (DF0[11,fs]<-data3[fs,9]/(data3[fs,20]-data3[fs,24]))
 }	 
 
-# Please add your directory 
-
-write.csv(DF0,"D:/Andrea/Desktop/economic_values.csv")
-
+# Please add your directory and save your file
+write.csv(DF0,"..../economic_values.csv")
+```
 ```
