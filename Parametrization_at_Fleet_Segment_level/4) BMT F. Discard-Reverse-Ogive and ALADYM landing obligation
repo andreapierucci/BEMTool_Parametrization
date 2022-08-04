@@ -1,3 +1,17 @@
+---
+title: "4) BEMTool F. Discard-Reverse-Ogive and ALADYM landing obligation"
+author: "Andrea Pierucci and Isabella Bitetto"
+date: '2022-03-25'
+output:
+  #bookdown::pdf_book:
+  pdf_document: default
+  #html_document: default
+header-includes:
+    - \usepackage{ragged2e}
+    - \usepackage{multirow}
+    - \usepackage{setspace}\doublespacing
+---
+
 ```{r}
 # insert discards, L50 and L75_L25 the same time of the fleet segment amount.
 (discard = c(rep("YES",18))) # please change 18 with the amount of your FS
