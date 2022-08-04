@@ -1,3 +1,17 @@
+---
+title: "2) BEMTool Natural Mortality (M), Recruitment and Total mortality (Z)"
+author: "Andrea Pierucci and Isabella Bitetto"
+date: '2022-03-25'
+output:
+  #bookdown::pdf_book:
+  pdf_document: default
+  #html_document: default
+header-includes:
+    - \usepackage{ragged2e}
+    - \usepackage{multirow}
+    - \usepackage{setspace}\doublespacing
+---
+
 Natural mortality
 
 ```{r echo=F}
@@ -238,4 +252,6 @@ write.table(F_file,"C:/INPUT/SOL17/Fmaen_used_for_M_calcualtion.csv",sep=";",row
 (DF_Z2$sex="F")
 (DF_Z=rbind(DF_Z,DF_Z2))
 
-write.table(DF_Z,"C:/INPUT/SOL17/Zmean.csv",sep=";",row.names=F)  
+write.table(DF_Z,"C:/INPUT/SOL17/Zmean.csv",sep=";",row.names=F) 
+```
+
