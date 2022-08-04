@@ -1,3 +1,17 @@
+---
+title: "3) BEMTool Selectivity"
+author: "Andrea Pierucci and Isabella Bitetto"
+date: '2022-03-25'
+output:
+  #bookdown::pdf_book:
+  pdf_document: default
+  #html_document: default
+header-includes:
+    - \usepackage{ragged2e}
+    - \usepackage{multirow}
+    - \usepackage{setspace}\doublespacing
+---
+
 ```{r}
 # Below there are an example of selectivity.csv creation with three GSAs and 18 fleet segments. 
 # Please add you fleet segments with the correct lables that you will use until the end of the all BMT scripts. 
@@ -148,3 +162,4 @@ for (fs in 2:length(Fleet_segments)){
 
 write.table(DF,paste(dir2,"/",SPECIES_1,"/Selectivity.csv",sep=""),sep=";",row.names=F)  
 ```
+
