@@ -1,0 +1,311 @@
+---
+title: "13) BEMTool configuration Forecast"
+author: "Andrea Pierucci and Isabella Bitetto"
+date: '2022-03-25'
+output:
+  #bookdown::pdf_book:
+  pdf_document: default
+  #html_document: default
+header-includes:
+    - \usepackage{ragged2e}
+    - \usepackage{multirow}
+    - \usepackage{setspace}\doublespacing
+---
+
+```
+library(tidyverse)
+library(data.table)
+library(readxl)
+
+# Please add your directory
+# For this elaboration you need the economic output produced by BEMTOOL after the run. 
+# This Economic output.csv should be in your selected output folder. 
+# Please use this type of csv only as Input for the following lines. 
+
+(data_start<-read.csv("D:/Andrea/Desktop/NEW_BEMTool/GSA171819 - Economic output.csv",sep=";", header=T))
+
+# Select your last available year. 
+(data2020<-data_start%>%filter(Year=="2020"))
+(data<-data2020)
+unique(data$Species)
+
+############################### prepare your vessel Data Frame #############################
+#now you can select your sub Country, sub region and Fishing technique. 
+#If you like you cold also add a filter of specific years such us year==c(2017:2019)
+
+data[is.na(data)] <- 0
+data["Value"][data["Value"]=="NK"] <- 0
+data["Value"][data["Value"]=="Inf"] <- 0
+data["Value"][data["Value"]=="NaN"] <- 0
+data["Value"][data["Value"]=="N"] <- 0
+data<-data%>%filter(Fleet_segment!="ALL")
+
+data$Value<-as.numeric(data$Value)
+
+(vessels<-data%>%
+    filter(Variable=="VESSELS.annual")%>%
+    group_by(Fleet_segment,Variable)%>%
+    summarise(N_vessels=mean(as.numeric((Value)))))
+
+############################### prepare your GT #############################
+(GT<-data%>%
+   filter(Variable=="GT.annual")%>%
+   group_by(Fleet_segment,Variable)%>%
+   summarise(GT=mean(as.numeric(Value))))
+
+############################### prepare your days at sea #############################
+(days_at_sea<-data%>%
+   filter(Variable=="DAYS.annual")%>%
+   group_by(Fleet_segment,Variable)%>%
+   summarise(days_at_sea=mean(as.numeric(Value))))
+
+# Here I need to specify the tot_landing and revenues by each species S1 S2 S3 S4 etc in the correct order
+# check the BTconfig for the species number order
+
+#  LANDINGS
+dataA<-data %>%
+  filter(!Variable%in%c("landing.weight","revenues.landing"))
+
+dataB<-data %>%
+  filter(Variable=="landing.weight" )
+
+(dataB2<-unite(dataB, col="landing_weight_X",c(Variable,Species), remove = F))
+
+# Please change your lable if you like. 
+# We used S1, S2 etc. You can use what you like
+
+# Please add the amount of your species 
+# hai tutto nel file Economic utput. Perchè far inserire all'utente cose che puoi leggere dal file?
+BMT_SPECIES<-unique(data_start[-which(data_start%Species=="ALL"),]$Species)
+# ADATTARE ANCHE LO SCRIPT PER FLEET SEGMENT
+
+# The 5 lines below could be more or less and are related to the amounto fo the species present in your Economic output files
+# Please change those accordingly with your data 
+#  QUI METTI UN CICLO FOR CHE GIRA SULLA LENGTH DI BMT_SPECIES
+
+dataB2[dataB2==paste("landing.weight_",S1, sep="")]<- "tot_landing_S1"
+dataB2[dataB2==paste("landing.weight_",S2, sep="")]<- "tot_landing_S2"
+dataB2[dataB2==paste("landing.weight_",S3, sep="")]<- "tot_landing_S3"
+dataB2[dataB2==paste("landing.weight_",S4, sep="")]<- "tot_landing_S4"
+dataB2[dataB2==paste("landing.weight_",S5, sep="")]<- "tot_landing_S5"
+
+
+(dataB2<-dataB2[,c(1:7,9:11)])
+colnames(dataB2)[5]<-"Variable"
+
+# REVENUES
+
+dataC<-data %>%
+  filter(Variable=="revenues.landing" )
+
+(dataC2<-unite(dataC, col="revenues.landing_X",c(Variable,Species), remove = F))
+unique(dataC2$revenues.landing_X)
+
+
+# The 5 lines below could be more or less and are related to the amounto fo the species present in your Economic output files
+# Please change those accordingly with your data 
+
+#  QUI METTI UN CICLO FOR CHE GIRA SULLA LENGTH DI BMT_SPECIES (Vale per tutto lo script....)
+
+dataC2[dataC2==paste("revenues.landing_",S1, sep="")]<-  "revenues_S1"
+dataC2[dataC2==paste("revenues.landing_",S2, sep="")]<-  "revenues_S2"
+dataC2[dataC2==paste("revenues.landing_",S3, sep="")]<-  "revenues_S3"
+dataC2[dataC2==paste("revenues.landing_",S4, sep="")]<-  "revenues_S4"
+dataC2[dataC2==paste("revenues.landing_",S5, sep="")]<-  "revenues_S5"
+unique(dataC2$revenues.landing_X)
+
+(dataC2<-dataC2[,c(1:7,9:11)])
+colnames(dataC2)[5]<-"Variable"
+
+(data<-rbind(dataA,dataB2,dataC2))
+
+
+(years<-c(2004:2020)) # please check the amount of year you are working with 
+
+(data1<-data%>%
+    filter(Year%in%years)%>%
+    spread(Variable,Value))
+
+# The lable name should be corrected and spaces removed
+# Pay attention and check the names 
+
+colnames(data1)[10]<-"depreciation_costs"
+colnames(data1)[11]<-"opportunity_cost"
+colnames(data1)[13]<-"capital_value"
+colnames(data1)[14]<-"max_days_at_sea" 
+colnames(data1)[35]<-"maintenance_costs"
+colnames(data1)[36]<-"other_fix_cost"
+colnames(data1)[42]<-"GT"
+colnames(data1)[50]<-"labour_cost"
+colnames(data1)[75]<-"tot_landing"
+colnames(data1)[77]<-"total_revenues_discard"
+colnames(data1)[78]<-"tot_revenues_landing"
+colnames(data1)[80]<-"fuel_cost"
+colnames(data1)[81]<-"other_var_cost"
+colnames(data1)[82]<-"tot_var_cost"
+colnames(data1)[32]<-"employment"
+
+# Please clean the data and select only the values you need. 
+(data2<-data1[,c(4,6,7,10,11,13,14,35,36,42,50,58:64,75,67:71,77,78,80,81,82,32)])
+
+data2[is.na(data2)] <- 0
+
+data2$opportunity_cost<-as.numeric(data2$opportunity_cost)
+data2$depreciation_costs<-as.numeric(data2$depreciation_costs)
+data2$capital_value<-as.numeric(data2$capital_value)
+data2$max_days_at_sea<-as.numeric(data2$max_days_at_sea)
+data2$maintenance_costs<-as.numeric(data2$maintenance_costs)
+data2$other_fix_cost<-as.numeric(data2$other_fix_cost)
+data2$GT<-as.numeric(data2$GT)
+data2$labour_cost<-as.numeric(data2$labour_cost)
+
+data2$tot_landing_S1<-as.numeric(data2$tot_landing_S1)
+data2$tot_landing_S2<-as.numeric(data2$tot_landing_S2)
+data2$tot_landing_S3<-as.numeric(data2$tot_landing_S3)
+data2$tot_landing_S4<-as.numeric(data2$tot_landing_S4)
+data2$tot_landing_S5<-as.numeric(data2$tot_landing_S5)
+
+data2$revenues_S1<-as.numeric(data2$revenues_S1)
+data2$revenues_S2<-as.numeric(data2$revenues_S2)
+data2$revenues_S3<-as.numeric(data2$revenues_S3)
+data2$revenues_S4<-as.numeric(data2$revenues_S4)
+data2$revenues_S5<-as.numeric(data2$revenues_S5)
+
+data2$tot_landing<-as.numeric(data2$tot_landing)
+
+data2$tot_revenues_landing<-as.numeric(data2$tot_revenues_landing)
+data2$total_revenues_discard<-as.numeric(data2$total_revenues_discard)
+data2$fuel_cost<-as.numeric(data2$fuel_cost)
+data2$other_var_cost<-as.numeric(data2$other_var_cost)
+data2$tot_var_cost<-as.numeric(data2$tot_var_cost)
+data2$employment<-as.numeric(data2$employment)
+
+# At this point you may calculate the mean values by fleet segment  
+
+(data3<-data2%>%group_by(Fleet_segment)%>%summarise(opportunity_cost=mean(opportunity_cost),
+                                                    depreciation_costs=mean(depreciation_costs),
+                                                    capital_value=mean(capital_value),
+                                                    max_days_at_sea=mean(max_days_at_sea),
+                                                    maintenance_costs=mean(maintenance_costs),
+                                                    other_fix_cost=mean(other_fix_cost),
+                                                    GT=mean(GT),
+                                                    labour_cost=mean(labour_cost),
+                                                    
+                                                    tot_landing_S1=mean(tot_landing_S1),
+                                                    tot_landing_S2=mean(tot_landing_S2),
+                                                    tot_landing_S3=mean(tot_landing_S3),
+                                                    tot_landing_S4=mean(tot_landing_S4),
+                                                    tot_landing_S5=mean(tot_landing_S5),
+                                                    
+                                                    
+                                                    revenues_S1=mean(revenues_S1),
+                                                    revenues_S2=mean(revenues_S2),
+                                                    revenues_S3=mean(revenues_S3),
+                                                    revenues_S4=mean(revenues_S4),
+                                                    revenues_S5=mean(revenues_S5),
+                                                    
+                                                    tot_revenues_landing=mean(tot_revenues_landing),
+                                                    total_revenues_discard=mean(total_revenues_discard),
+                                                    
+                                                    fuel_cost=mean(fuel_cost),
+                                                    other_var_cost=mean(other_var_cost),
+                                                    tot_var_cost=mean(tot_var_cost),
+                                                    tot_landing=mean(tot_landing),
+                                                    employment=mean(employment)))
+
+(fleet_segments <-c(unique(data$Fleet_segment)))
+
+# Now you need to add the lable
+(economic_values = c("coeff_fuel_cost",
+                     "othervariablecosts_coeff",
+                     "maintenancecosts_coeff",
+                     "otherfixed_cost",
+                     "depreciationcosts_coeff",
+                     "opportunitycosts_coeff",
+                     "correc_factor_for_land",
+                     "correc_factor_for_rev",
+                     "value_of_single_vessel",
+                     "average_employees_per_vessel",
+                     "crew_share"))
+
+
+(DF0=matrix(0,nrow=length(economic_values),ncol=length(fleet_segments)))
+(colnames(DF0)=fleet_segments)
+(rownames(DF0)=economic_values)
+DF0<-as.data.frame(DF0)
+
+# At this point you may start your variable calculation
+# Please considere that the amount of line below for each variable calculation are relate to the amount of your Fleet Segments
+# Here we have an example with 24 line = to 24 fleet segments. 
+# you need to play with amount of line only
+
+#fuel_cost
+
+for (fs in 1:length(fleet_segments)){
+  (DF0[1,fs]<-data3[fs,22]/(vessels[fs,3]*days_at_sea[fs,3]))
+}
+
+#othervariablecosts_coeff
+
+for (fs in 1:length(fleet_segments)){
+  (DF0[2,fs]<-data3[fs,23]/(vessels[fs,3]*days_at_sea[fs,3]))
+}
+
+#maintenancecosts_coeff
+
+for (fs in 1:length(fleet_segments)){
+  (DF0[3,fs]<-data3[fs,6]/GT[fs,3])
+}
+
+#otherfixed_cost
+
+for (fs in 1:length(fleet_segments)){
+  (DF0[4,fs]<-data3[fs,7]/GT[fs,3])
+}
+
+#depreciationcosts_coeff
+
+for (fs in 1:length(fleet_segments)){
+  (DF0[5,fs]<-data3[fs,3]/GT[fs,3])
+}
+
+#opportunitycosts_coeff
+
+for (fs in 1:length(fleet_segments)){
+  (DF0[6,fs]<-data3[fs,2]/GT[fs,3])
+}
+			 
+#correc_factor_for_land = tot_landing /  sum( tot_landing_S1 + tot_landing_S2 + tot_landing_S3 ...)
+
+for (fs in 1:length(fleet_segments)){
+  (DF0[7,fs]<-data3[fs,25]/sum(data3[fs,10],data3[fs,11],data3[fs,12],data3[fs,13],data3[fs,14]))
+}
+				 
+#correc_factor_for_rev = tot_revenues_landing / sum(revenues_S1 + revenues_S2 + revenues_S3 ...)
+				 
+for (fs in 1:length(fleet_segments)){
+  (DF0[8,fs]<-data3[fs,20]/sum(data3[fs,15],data3[fs,16],data3[fs,17],data3[fs,18],data3[fs,19]))
+}
+
+#value_of_single_vessel = capital_value / N_vessels
+
+for (fs in 1:length(fleet_segments)){
+  (DF0[9,fs]<-data3[fs,4]/vessels[fs,3])
+}
+			 
+#average_employees_per_vessel = employment / N_vessels
+
+for (fs in 1:length(fleet_segments)){
+  (DF0[10,fs]<-data3[fs,26]/vessels[fs,3])
+}
+
+#crew_share = labour_cost / (tot_revenues_landing - tot_var_cost)
+
+for (fs in 1:length(fleet_segments)){
+  (DF0[11,fs]<-data3[fs,9]/(data3[fs,20]-data3[fs,24]))
+}	 
+
+# Please add your directory 
+
+write.csv(DF0,"D:/Andrea/Desktop/economic_values.csv")
+```
