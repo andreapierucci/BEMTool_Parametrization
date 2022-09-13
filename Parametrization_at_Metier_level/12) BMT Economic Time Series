@@ -1,0 +1,2321 @@
+---
+title: "12) BEMTool Economic Time Series"
+author: "Andrea Pierucci and Isabella Bitetto"
+date: '2022-08-08'
+output:
+  #bookdown::pdf_book:
+  pdf_document: default
+  #html_document: default
+header-includes:
+    - \usepackage{ragged2e}
+    - \usepackage{multirow}
+    - \usepackage{setspace}\doublespacing
+---
+
+
+```
+# packages needed 
+
+library(tidyverse)
+library(data.table)
+library(readxl)
+
+# We use the official STECF data, we use this data are from 2008 to 2013 
+dir<-"D:/Andrea/Desktop/NEW_BEMTool/STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment.xlsx" #this for data from 2008 to 2013 
+(dataXX<-read_xlsx(dir, sheet = 2)) 
+
+# Maxseadays follows National rools and are equal in all GSAs. So we do not need to have this data at a GSA level of detail. 
+# NB In the lines below we show how to extract and manipulate data for calculating the following variables:
+
+#  1) The Maxseadays
+#  2) Total_landings + total revenues ALL species-
+#  3) Total revenue ALL species
+#  4) Total_landings ALL species
+#  5) S1 data preparation (Landings + Revenues)
+#  6) Total Revenue S1
+#  7) Total landings S1
+#  8) fuelcosts 
+#  9) labour_costs
+# 10) othervariablecosts
+# 11) totalvariablecosts
+# 12) revenues.discards.S1
+# 13) commercialcosts
+# 14) essentialcosts
+# 15) avoidablemaintenancecosts
+# 16) unavoidablemaintenancecosts
+# 17) otherincome
+# 18) depreciationcosts
+# 19) other fixed costs
+# 20) maintenance costs
+# 21) Capital value
+# 22) opportunity costs
+# 23) employement
+# 24) total fixed costs
+# 25) totalcapitalcosts
+
+
+#-------------------------------------------------------Maxseadays-----------------------------------------------------------
+maxseadays<-dataXX
+
+# First we need to check if the all time series is complete. If some years are missing you may copy the first available year. 
+# NB All the data needs the same amount of years in BMT. 
+# In this case we have the two first year (2206 and 2007) missing so we copy both from the first available year (2008).
+CC<-"ITA"
+GSA<-"GSA9"
+SP<-"MUT"
+(maxseadays<-maxseadays%>%
+    filter(country_code==CC & variable_code=="maxseadays" & supra_reg=="AREA37"))
+
+(maxseadays2008<-maxseadays%>%filter(year=="2008"))
+(maxseadays2006<-maxseadays2007<-maxseadays2008)
+maxseadays2006$year<-"2006"
+maxseadays2007$year<-"2007"
+(maxseadays<-rbind(maxseadays2006,maxseadays2007,maxseadays))
+
+(maxseadaysOTB0612<-maxseadays%>%
+    filter(fishing_tech==FT1 & vessel_length=="VL0612"))
+maxseadaysOTB0612$metier<-"DEF"
+# Next you may select the LOA you are working with 
+
+FT1<-"DTS"
+LOA1<-c("VL0612","VL1218","VL1824","VL2440")
+
+(maxseadaysOTBDUP<-maxseadays%>%
+    filter(fishing_tech==FT1 & vessel_length%in%c("VL1218","VL1824","VL2440")))
+
+(maxseadaysOTBDUP_DEF<-maxseadaysOTBDUP_DWS<-maxseadaysOTBDUP_MDD<-maxseadaysOTBDUP)
+maxseadaysOTBDUP_DEF$metier<-"DEF"
+maxseadaysOTBDUP_DWS$metier<-"DWS"
+maxseadaysOTBDUP_MDD$metier<-"MDD"
+maxseadays2<-rbind(maxseadaysOTBDUP_DEF,maxseadaysOTBDUP_DWS,maxseadaysOTBDUP_MDD)
+maxseadays3<-rbind(maxseadays2,maxseadaysOTB0612)
+
+unique(maxseadays$vessel_length)
+# Here we grouped some PGP LOA as we did in previous steps
+# This aggregation is arbitrary 
+FT2<-"PGP"
+LOA2<-c("VL0006","VL0612")
+(maxseadaysPGP1<-maxseadays%>%
+    select(country_code,year,supra_reg,fishing_tech,vessel_length,value,unit)%>%
+    filter(fishing_tech==FT2& supra_reg=="AREA37"& vessel_length=="VL1218"))
+
+(maxseadaysPGP2<-maxseadays%>%
+    select(country_code,year,supra_reg,fishing_tech,vessel_length,value,unit)%>%
+    filter(fishing_tech==FT2& supra_reg=="AREA37"& vessel_length%in%LOA2)%>%
+    group_by(country_code,year,supra_reg,fishing_tech,unit)%>%
+    summarise(value=sum(value)))
+maxseadaysPGP2$vessel_length<-"VL0012"
+(maxseadaysPGP3<-rbind(maxseadaysPGP2,maxseadaysPGP1))
+# Also in this case the final label of each segment shall be equal to all the previous one data elaboration
+# At this point you may add the "GSA" label you need. 
+maxseadaysPGP3$gSA<-GSA
+(maxseadaysPGP3<-maxseadaysPGP3[,c(8,4,7,2,6,5)])
+(maxseadaysPGP4<-maxseadaysPGP3%>%unite("FS",c(gSA:vessel_length), remove = T))
+
+(maxseadays3<-maxseadays3[,c(3,4,6,7,14,15,19)])
+(maxseadays3<-maxseadays3%>%filter(year%in%c("2006":"2013")))
+maxseadays3$GSA<-GSA
+maxseadays3$OTB<-"OTB"
+(maxseadays4<-maxseadays3[,c(8,3,4,9,7,2,5,6)])
+(maxseadays4<-maxseadays4%>%unite("FS",c(GSA:metier), remove = T))
+
+
+(maxseadays4<-rbind(maxseadays4,maxseadaysPGP4))
+(maxseadaysDF<-maxseadays4%>%arrange(year,FS))
+
+# Next you may move on to the most recent data (from 2014 to 2020).
+# We use the FDI official dataset.
+(RECENTDATA2<-read.csv("D:/Andrea/Desktop/NEW_BEMTool/FDI_capacity_by_country.csv", sep = ";"))
+# Please select you GSAs
+COUNTRY<-"Italy"
+GSA<-"GSA9"
+
+
+(RECENTDATA2<-RECENTDATA2%>%filter(Country.name==COUNTRY &  principal.sub.region==GSA))
+
+(RECENTDATAOTB0612<-RECENTDATA2%>%
+    filter(Country.name==COUNTRY & Fishing.Technique==FT1 & Vessel.Length.Category=="VL0612"))
+RECENTDATAOTB0612$metier<-"DEF"
+(RECENTDATAOTBDUP<-RECENTDATA2%>%
+    filter(Country.name==COUNTRY & Fishing.Technique==FT1 & Vessel.Length.Category%in%c( "VL1218","VL1824","VL2440")))
+
+(RECENTDATAOTB_DEF<-RECENTDATAOTB_DWS<-RECENTDATAOTB_MDD<-RECENTDATAOTBDUP)
+RECENTDATAOTB_DEF$metier<-"DEF"
+RECENTDATAOTB_DWS$metier<-"DWS"
+RECENTDATAOTB_MDD$metier<-"MDD"
+RECENTDATAOTBDUP<-rbind(RECENTDATAOTB_DEF,RECENTDATAOTB_DWS,RECENTDATAOTB_MDD)
+RECENTDATAOTB<-rbind(RECENTDATAOTB0612,RECENTDATAOTBDUP)
+RECENTDATAOTB$OTB<-"OTB"
+
+(RECENTDATAOTB<-RECENTDATAOTB%>%
+    select(principal.sub.region,Fishing.Technique,Vessel.Length.Category,OTB,metier,year,maximum.sea.days)%>%
+    arrange(year,Vessel.Length.Category))
+(RECENTDATAOTB<-RECENTDATAOTB%>%unite("FS",c(principal.sub.region:metier), remove = T))
+
+
+# Now we may organize the PGP data.
+
+(RECENTDATAPGP2<-RECENTDATA2%>%
+    filter(Country.name==COUNTRY & Fishing.Technique==FT2 & Vessel.Length.Category=="VL1218")%>%
+    select(principal.sub.region,Fishing.Technique,Vessel.Length.Category,year,maximum.sea.days))
+RECENTDATAPGP2$maximum.sea.days<-as.numeric(RECENTDATAPGP2$maximum.sea.days)
+
+
+(RECENTDATAPGP1<-RECENTDATA2%>%
+    filter(Country.name==COUNTRY & Fishing.Technique==FT2 & Vessel.Length.Category%in%LOA2))
+RECENTDATAPGP1$maximum.sea.days <-as.numeric(RECENTDATAPGP1$maximum.sea.days)
+
+(RECENTDATAPGP1<-RECENTDATAPGP1%>%
+    select(principal.sub.region,year,Fishing.Technique,maximum.sea.days)%>%
+    group_by(principal.sub.region,year,Fishing.Technique)%>%
+    summarise(maximum.sea.days=sum(as.numeric(maximum.sea.days))))
+RECENTDATAPGP1$Vessel.Length.Category<-"VL0012"
+
+RECENTDATAPGP<-rbind(RECENTDATAPGP1,RECENTDATAPGP2)
+(RECENTDATAPGP<-RECENTDATAPGP[,c(1,3,5,2,4)])
+(RECENTDATAPGP<-RECENTDATAPGP%>%unite("FS",c(principal.sub.region:Vessel.Length.Category), remove = T))
+
+RECENTDATAFD<-rbind(RECENTDATAOTB,RECENTDATAPGP)
+# All DF from 2006-2020 completed (we add the old and the new data) 
+maxseadaysDF<-maxseadaysDF[,c(1,2,3)]
+colnames(RECENTDATAFD)[3]<-"value"
+(ALLDATAFD<-rbind( maxseadaysDF,  RECENTDATAFD))
+(ALLDATAFD<-ALLDATAFD%>%arrange(year,FS))
+#-----------------------------2)-Total_landings + total revenues ALL species---------------------------------------------------------
+
+#  I first prepare the data set for the new data 2014-2020 for both landings and revenues. 
+#  Next I work with the recent data 2008-2013 of REVENUE and when these are ready I rbind the two revenues data set (2008-2013 + 2014-2020)
+#I prepare the recent data 2008-2013 of LANDINGS and when these are ready I rbind the two landings data set (2008-2013 + 2014-2020)
+
+# These are the packages needed. 
+
+library(tidyverse)
+library(data.table)
+library(readxl)
+
+# Add your directory and use only offcial data if possible such as FDI or others. 
+
+dir<-"D:/Andrea/Desktop/NEW_BEMTool/FDI_catches_by_country.xlsx"
+
+(Y2020<-read_xlsx(dir, sheet = 2))
+(Y2019<-read_xlsx(dir, sheet = 3))
+(Y2018<-read_xlsx(dir, sheet = 4))
+(Y2017<-read_xlsx(dir, sheet = 5))
+(Y2016<-read_xlsx(dir, sheet = 6))
+(Y2015<-read_xlsx(dir, sheet = 7))
+(Y2014<-read_xlsx(dir, sheet = 8))
+
+head(Y2019)
+
+catch<-rbind(Y2020,Y2019,Y2018,Y2017,Y2016,Y2015,Y2014)
+
+rm(Y2020,Y2019,Y2018,Y2017,Y2016,Y2015,Y2014)
+# If you use the FDI data, please change some labels it will be easier to work with other data STECF data frame at the same time. 
+
+names(catch)[1]<-"country_code"
+names(catch)[14]<-"sub_region"
+names(catch)[6]<-"fishing_technique"
+names(catch)[2]<-"country_name"
+names(catch)[5]<-"vessel_length"
+names(catch)[8]<-"Target_Assemblage" 
+names(catch)[21]<-"total_live_weight_landed_tonnes"
+names(catch)[22]<-"total_value_of_landings_euro"
+names(catch)[23]<-"total_discards"
+names(catch)[7]<- "gear_type"
+# After you could select your country, GSA and species
+
+
+# Here the data extraction for data from 2020 to 2014
+#  MUT GSA 9 
+
+# NB for the DTS there are no problem in GSA 9 for Italy and data are available from 2020 to 2014 however in the same area for PGP we found data from 2016 to 2014 only 
+COUNTRY<-"Italy"
+GSA<-"GSA9"
+
+(DTS<-catch%>%
+    select(country_name,year,vessel_length,fishing_technique,gear_type,Target_Assemblage,sub_region,species,total_live_weight_landed_tonnes,total_value_of_landings_euro)%>%
+    filter(country_name==COUNTRY & sub_region==GSA & fishing_technique==FT1& gear_type=="OTB"))
+
+# PGP data from 2016 to 2014 
+
+(PGP<-catch%>%
+    select(country_name,year,vessel_length,fishing_technique,gear_type,Target_Assemblage,sub_region,species,total_live_weight_landed_tonnes,total_value_of_landings_euro)%>%
+    filter(country_name==COUNTRY & sub_region==GSA & fishing_technique==FT2))
+# please check if there are all fleet segments in all the year or if thewre are some missing data
+
+(PGP<-PGP%>%
+    select(year,vessel_length,sub_region,species,total_live_weight_landed_tonnes,gear_type,fishing_technique,Target_Assemblage,total_value_of_landings_euro)%>%
+    group_by(year,vessel_length,sub_region,species,gear_type,fishing_technique,Target_Assemblage)%>%
+    summarise(total_live_weight_landed_tonnes=sum(as.numeric(total_live_weight_landed_tonnes)),
+              total_value_of_landings_euro=sum(as.numeric(total_value_of_landings_euro))))
+
+(PGP<-PGP[,c(3,6,2,1,4,8,9)])
+
+(PGP1<-PGP%>%
+    filter(vessel_length%in%LOA2)%>%
+    group_by(sub_region,fishing_technique,year,species)%>%
+    summarise(total_live_weight_landed_tonnes=sum(as.numeric(total_live_weight_landed_tonnes)),
+              total_value_of_landings_euro=sum(as.numeric(total_value_of_landings_euro))))
+(PGP1$vessel_length<-"VL0012")
+(PGP1<-PGP1[,c(1,2,7,3,4,5,6)])
+
+(PGP2<-PGP%>%
+    filter(vessel_length==("VL1218"))%>%
+    group_by(sub_region,fishing_technique,vessel_length,year,species)%>%
+    summarise(total_live_weight_landed_tonnes=sum(as.numeric(total_live_weight_landed_tonnes)),
+              total_value_of_landings_euro=sum(as.numeric(total_value_of_landings_euro))))
+
+(PGP3<-rbind(PGP1,PGP2))
+(PGP4<-PGP3%>%unite("FS",c(sub_region:vessel_length), remove = T))
+
+# cleaned and conversion data from tons to KG
+(DTS$total_live_weight_landed_tonnes[DTS$total_live_weight_landed_tonnes=="NK"] <- 0.000001)
+(DTS$total_live_weight_landed_tonnes<-as.numeric(DTS$total_live_weight_landed_tonnes))
+(DTS$total_live_weight_landed_tonnes<-DTS$total_live_weight_landed_tonnes*1000 )# here I convert tons to kg (BEMTool needs kg)
+
+(PGP$total_live_weight_landed_tonnes[PGP$total_live_weight_landed_tonnes=="NK"] <- 0.000001)
+(PGP$total_live_weight_landed_tonnes<-as.numeric(PGP$total_live_weight_landed_tonnes))
+(PGP$total_live_weight_landed_tonnes<-PGP$total_live_weight_landed_tonnes*1000 )# here I convert tons to kg (BEMTool needs kg)
+
+(DTS<-DTS%>%
+    select(year,vessel_length,sub_region,fishing_technique,species,total_live_weight_landed_tonnes,gear_type,Target_Assemblage,total_value_of_landings_euro)%>%
+    group_by(year,vessel_length,sub_region,fishing_technique,species,gear_type,Target_Assemblage)%>%
+    summarise(total_live_weight_landed_tonnes=sum(as.numeric(total_live_weight_landed_tonnes)),
+              total_value_of_landings_euro=sum(as.numeric(total_value_of_landings_euro))))
+
+(DTS<-DTS[,c(3,4,2,6,7,1,5,8,9)])
+
+(DTSFUL<-DTS%>%unite("FS",c(sub_region:Target_Assemblage), remove = T))
+
+(FULLDF<-rbind(DTSFUL,PGP4))
+
+(FULLDF_totland_totrev<-FULLDF %>%
+    group_by(FS,year)%>%
+    summarise(total_live_weight_landed_tonnes=sum(as.numeric(total_live_weight_landed_tonnes)),
+              total_value_of_landings_euro=sum(as.numeric(total_value_of_landings_euro))))
+
+(FULLDF_totland_totrev<-FULLDF_totland_totrev%>%arrange(year,FS))
+(FULLDF_totland_totrev<-FULLDF_totland_totrev%>%filter( FS!="GSA9_DTS_VL2440_OTB_DWS")) # THIS IS Ready the DF of RECENT DATA 
+# please check if there are all the fleet segments you need in all the years and if there are some missing data. 
+
+# in 2017 there are amissing data and in 2019 there are some fleet segments that should be removed 
+# cleaning 
+(FULLDF_totland_totrev_miss<-FULLDF_totland_totrev%>%filter(year=="2016" & FS=="GSA9_DTS_VL1218_OTB_DWS"))
+(FULLDF_totland_totrev_miss$year<-2017)
+(FULLDF_totland_totrev<-rbind(FULLDF_totland_totrev_miss,FULLDF_totland_totrev))
+
+(FULLDF_totland_totrev_miss2<-FULLDF_totland_totrev%>%filter(year=="2016" & FS=="GSA9_DTS_VL1824_OTB_DWS"))
+(FULLDF_totland_totrev_miss$year<-2017)
+(FULLDF_totland_totrev<-rbind(FULLDF_totland_totrev_miss2,FULLDF_totland_totrev))
+
+(FULLDF_totland_totrev<-FULLDF_totland_totrev%>%filter(!FS%in%c("GSA9_DTS_VL0612_OTB_DWS","GSA9_DTS_VL0612_OTB_MDD")))
+(FULLDF_totland_totrev<-FULLDF_totland_totrev%>%arrange(year,FS))
+
+(FULLDF_totland_totrev_2014<-FULLDF_totland_totrev%>%filter(year=="2014"))
+# below the proportion for the 2014 data. I will use this proportion for splitting the STECF 21-08 EU data landing
+
+
+############ TOTAL_REVENUE  ##########
+(FULLDF_2014_A<-FULLDF_totland_totrev_2014[,c(1,2,4)])
+
+(FULLDF_2014_A_NOT_DUP<-FULLDF_2014_A%>%filter(FS%in%"GSA9_DTS_VL0612_OTB_DEF"))
+
+(FULLDF_2014_A_DUP_1218<-FULLDF_2014_A%>%
+    filter(FS%in%c("GSA9_DTS_VL1218_OTB_DEF","GSA9_DTS_VL1218_OTB_DWS","GSA9_DTS_VL1218_OTB_MDD")))
+
+(FULLDF_2014_A_DUP_1824<-FULLDF_2014_A%>%
+    filter(FS%in%c("GSA9_DTS_VL1824_OTB_DEF","GSA9_DTS_VL1824_OTB_DWS","GSA9_DTS_VL1824_OTB_MDD")))
+
+(FULLDF_2014_A_DUP_2440<-FULLDF_2014_A%>%
+    filter(FS%in%c("GSA9_DTS_VL2440_OTB_DEF","GSA9_DTS_VL2440_OTB_MDD")))
+
+(FULLDF_2014_A_PGP<-FULLDF_2014_A%>%filter(FS%in%c("GSA9_PGP_VL0012","GSA9_PGP_VL1218")))
+
+(FULLDF_2014_A_NOT_DUP$PROP<-1)
+
+(FULLDF_2014_A_DUP_1218$tot<-sum(as.numeric(FULLDF_2014_A_DUP_1218$total_value_of_landings_euro)))
+(FULLDF_2014_A_DUP_1218$PROP<-as.numeric(FULLDF_2014_A_DUP_1218$total_value_of_landings_euro)/as.numeric(FULLDF_2014_A_DUP_1218$tot))
+(FULLDF_2014_A_DUP_1218<-FULLDF_2014_A_DUP_1218[,c(1,2,3,5)])
+
+(FULLDF_2014_A_DUP_1824$tot<-sum(as.numeric(FULLDF_2014_A_DUP_1218$total_value_of_landings_euro)))
+(FULLDF_2014_A_DUP_1824$PROP<-as.numeric(FULLDF_2014_A_DUP_1824$total_value_of_landings_euro)/as.numeric(FULLDF_2014_A_DUP_1824$tot))
+(FULLDF_2014_A_DUP_1824<-FULLDF_2014_A_DUP_1824[,c(1,2,3,5)])
+
+(FULLDF_2014_A_DUP_2440$tot<-sum(as.numeric(FULLDF_2014_A_DUP_2440$total_value_of_landings_euro)))
+(FULLDF_2014_A_DUP_2440$PROP<-as.numeric(FULLDF_2014_A_DUP_2440$total_value_of_landings_euro)/as.numeric(FULLDF_2014_A_DUP_2440$tot))
+(FULLDF_2014_A_DUP_2440<-FULLDF_2014_A_DUP_2440[,c(1,2,3,5)])
+
+(FULLDF_2014_A_PGP$PROP<-1)
+
+(FULLDF_2014_A_REV<-rbind (FULLDF_2014_A_NOT_DUP,FULLDF_2014_A_DUP_1218,FULLDF_2014_A_DUP_1824,FULLDF_2014_A_DUP_2440,FULLDF_2014_A_PGP))
+
+################# TOTAL_LANDINGS ####################
+
+(FULLDF_2014_B<-FULLDF_totland_totrev_2014[,c(1,2,3)])
+
+(FULLDF_2014_B_NOT_DUP<-FULLDF_2014_B%>%filter(FS%in%"GSA9_DTS_VL0612_OTB_DEF"))
+
+(FULLDF_2014_B_DUP_1218<-FULLDF_2014_B%>%
+    filter(FS%in%c("GSA9_DTS_VL1218_OTB_DEF","GSA9_DTS_VL1218_OTB_DWS","GSA9_DTS_VL1218_OTB_MDD")))
+
+(FULLDF_2014_B_DUP_1824<-FULLDF_2014_B%>%
+    filter(FS%in%c("GSA9_DTS_VL1824_OTB_DEF","GSA9_DTS_VL1824_OTB_DWS","GSA9_DTS_VL1824_OTB_MDD")))
+
+(FULLDF_2014_B_DUP_2440<-FULLDF_2014_B%>%
+    filter(FS%in%c("GSA9_DTS_VL2440_OTB_DEF","GSA9_DTS_VL2440_OTB_MDD")))
+
+(FULLDF_2014_B_PGP<-FULLDF_2014_B%>%filter(FS%in%c("GSA9_PGP_VL0012","GSA9_PGP_VL1218")))
+
+(FULLDF_2014_B_NOT_DUP$PROP<-1)
+
+(FULLDF_2014_B_DUP_1218$tot<-sum(as.numeric(FULLDF_2014_B_DUP_1218$total_live_weight_landed_tonnes)))
+(FULLDF_2014_B_DUP_1218$PROP<-as.numeric(FULLDF_2014_B_DUP_1218$total_live_weight_landed_tonnes)/as.numeric(FULLDF_2014_B_DUP_1218$tot))
+(FULLDF_2014_B_DUP_1218<-FULLDF_2014_B_DUP_1218[,c(1,2,3,5)])
+
+(FULLDF_2014_B_DUP_1824$tot<-sum(as.numeric(FULLDF_2014_B_DUP_1824$total_live_weight_landed_tonnes)))
+(FULLDF_2014_B_DUP_1824$PROP<-as.numeric(FULLDF_2014_B_DUP_1824$total_live_weight_landed_tonnes)/as.numeric(FULLDF_2014_B_DUP_1824$tot))
+(FULLDF_2014_B_DUP_1824<-FULLDF_2014_B_DUP_1824[,c(1,2,3,5)])
+
+(FULLDF_2014_B_DUP_2440$tot<-sum(as.numeric(FULLDF_2014_B_DUP_2440$total_live_weight_landed_tonnes)))
+(FULLDF_2014_B_DUP_2440$PROP<-as.numeric(FULLDF_2014_B_DUP_2440$total_live_weight_landed_tonnes)/as.numeric(FULLDF_2014_B_DUP_2440$tot))
+(FULLDF_2014_B_DUP_2440<-FULLDF_2014_B_DUP_2440[,c(1,2,3,5)])
+
+(FULLDF_2014_B_PGP$PROP<-1)
+
+(FULLDF_2014_B_LANDINGS<-rbind(FULLDF_2014_B_NOT_DUP,FULLDF_2014_B_DUP_1218,FULLDF_2014_B_DUP_1824,FULLDF_2014_B_DUP_2440,FULLDF_2014_B_PGP))
+
+# Please check if there are all the fleet segments you need in all the years and if there are some missing data.
+# Below is the extraction of the older data 2008-2016
+# now you need to load your data, we used STECF official data 
+
+dir<-"D:/Andrea/Desktop/NEW_BEMTool/STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment.xlsx" #this for data from 2008 to 2013 
+
+(dataYY2008_2011<-read_xlsx(dir, sheet = 9))
+(dataYY2012_2016<-read.csv2("D:/Andrea/Desktop/NEW_BEMTool/STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment_2.csv",sep=";", header=T)) #there where some problems in the extraction of the excel so I saved separately the second sheet I needed
+
+#prepare the two data set 
+(dataYY2008_2011<-dataYY2008_2011%>%select(country_code,year,supra_reg,fishing_tech,vessel_length,variable_code,value,unit,species_code,sub_reg))
+(dataYY2012_2016<-dataYY2012_2016%>%select(country_code,year,supra_reg,fishing_tech,vessel_length,variable_code,value,unit,species_code,sub_reg))
+data<-rbind(dataYY2008_2011,dataYY2012_2016)
+
+(dataDTS_not_DUP<-data%>%
+    filter(country_code==CC & year%in%c(2008:2013) & supra_reg=="AREA37" & fishing_tech==FT1 & sub_reg=="sa 9" & vessel_length=="VL0612" ))
+
+(dataDTS_DUP<-data%>%
+    filter(country_code==CC & year%in%c(2008:2013) & supra_reg=="AREA37" & fishing_tech==FT1 & sub_reg=="sa 9"& vessel_length%in%c("VL1218","VL1824","VL2440")))
+
+(dataDTS_PGP<-data%>%
+    filter(country_code==CC & year%in%c(2008:2013) & supra_reg=="AREA37"& fishing_tech==FT2& sub_reg=="sa 9"& vessel_length%in%c("VL0006","VL0612","VL1218")))
+
+(DATA_STECF<-rbind(dataDTS_not_DUP,dataDTS_DUP,dataDTS_PGP))
+# for consistency I shell remove all the species present in STECF data frame that are not present in FDI data frame
+# some check:
+# length(unique(DATA_FDI$species))
+# length(unique(DATA_STECF$species_code))
+(spec<-unique(FULLDF$species))
+
+# below the total landing and total revenue by gsa and by LOA
+(DATA_STECF_2<-DATA_STECF%>%
+    filter(species_code%in%spec)%>%
+    group_by(sub_reg,country_code,year,fishing_tech,vessel_length,variable_code,unit)%>%
+    summarise(value=sum(as.numeric(value))))
+# ----------------------------3)-Total revenue------------
+
+# The total revenue I start with the old data 2008-2013 of revenue
+(DATA_STECF_2_totrevenue<-DATA_STECF_2%>%filter(variable_code=="totvallandg"))
+colnames(DATA_STECF_2_totrevenue)[8]<-"totrevenue"
+(DATA_STECF_2_totrevenue<-DATA_STECF_2_totrevenue[,c(1,2,3,4,5,8)])
+
+# Below the filter data by LOA and by METIERS 
+# I start with the DTS data
+
+(DATA_STECF_2_totrevenueDTS<-DATA_STECF_2_totrevenue%>%filter(fishing_tech%in%FT1))
+
+(DATA_STECF_2_totrevenueDTS_NOTDUP<-DATA_STECF_2_totrevenueDTS%>%
+    filter(vessel_length=="VL0612"))
+DATA_STECF_2_totrevenueDTS_NOTDUP$metier<-"DEF"
+DATA_STECF_2_totrevenueDTS_NOTDUP$OTB<-"OTB"
+DATA_STECF_2_totrevenueDTS_NOTDUP$sub_reg<-GSA
+
+(DATA_STECF_2_totrevenueDTS_1218<-DATA_STECF_2_totrevenueDTS%>%filter(vessel_length=="VL1218"))
+(DATA_STECF_2_totrevenueDTS_1824<-DATA_STECF_2_totrevenueDTS%>%filter(vessel_length=="VL1824"))
+(DATA_STECF_2_totrevenueDTS_2440<-DATA_STECF_2_totrevenueDTS%>%filter(vessel_length=="VL2440"))
+
+(DATA_STECF_2_totrevenueDTS_2440<-rbind(DATA_STECF_2_totrevenueDTS_2440[1,],DATA_STECF_2_totrevenueDTS_2440))
+(DATA_STECF_2_totrevenueDTS_2440[1,3]<-2008)
+
+(DATA_STECF_2_totrevenueDTS_DUPPLIC1218<-rbind(DATA_STECF_2_totrevenueDTS_1218,DATA_STECF_2_totrevenueDTS_1218,DATA_STECF_2_totrevenueDTS_1218))
+(DATA_STECF_2_totrevenueDTS_DUPPLIC1824<-rbind(DATA_STECF_2_totrevenueDTS_1824,DATA_STECF_2_totrevenueDTS_1824,DATA_STECF_2_totrevenueDTS_1824))
+(DATA_STECF_2_totrevenueDTS_DUPPLIC2440<-rbind(DATA_STECF_2_totrevenueDTS_2440,DATA_STECF_2_totrevenueDTS_2440,DATA_STECF_2_totrevenueDTS_2440))
+
+(FULLDF_FINAL_DUPLIC<-rbind(DATA_STECF_2_totrevenueDTS_DUPPLIC1218,DATA_STECF_2_totrevenueDTS_DUPPLIC1824,DATA_STECF_2_totrevenueDTS_DUPPLIC2440))
+FULLDF_FINAL_DUPLIC$sub_reg<-GSA
+(FULLDF_FINAL_DUPLIC<-FULLDF_FINAL_DUPLIC%>%arrange(year,vessel_length))
+(FULLDF_FINAL_DUPLIC$metier<-rep(c("DEF","DWS","MDD"), 3*6))
+
+(FULLDF_FINAL_DUPLIC$OTB<-"OTB")
+
+(FULLDF_DUP_FINAL_FINAL<-rbind(DATA_STECF_2_totrevenueDTS_NOTDUP,FULLDF_FINAL_DUPLIC))
+(FULLDF_DUP_FINAL_FINAL<-FULLDF_DUP_FINAL_FINAL%>%arrange(year,vessel_length))
+
+(FULLDF_DUP_FINAL_FINAL<-FULLDF_DUP_FINAL_FINAL[,c(1,4,5,8,7,3,6)])
+
+(FULLDF_DUP_FINAL_FINAL<-FULLDF_DUP_FINAL_FINAL%>%unite("FS",c(sub_reg:metier), remove = T))
+(FULLDF_DUP_FINAL_FINAL<-FULLDF_DUP_FINAL_FINAL%>%arrange(year,FS))
+
+### PGP 
+DATA_STECF_2_totrevenuePGP<-DATA_STECF_2_totrevenue%>%filter(fishing_tech%in%FT2)
+(DATA_STECF_2_totrevenuePGP_NOTDUP<-DATA_STECF_2_totrevenuePGP%>%
+    filter(vessel_length%in%c("VL0612","VL0006"))%>%
+    group_by(sub_reg,country_code,fishing_tech,year)%>%
+    summarise(totrevenue=sum(as.numeric(totrevenue))))
+
+(DATA_STECF_2_totrevenuePGP_NOTDUP$vessel_length<-"VL0012")
+
+(DATA_STECF_2_totrevenuePGP_NOTDUP_2<-DATA_STECF_2_totrevenuePGP%>%filter(vessel_length%in%"VL1218"))
+(DATA_STECF_2_totrevenuePGP<-rbind(DATA_STECF_2_totrevenuePGP_NOTDUP,DATA_STECF_2_totrevenuePGP_NOTDUP_2))
+DATA_STECF_2_totrevenuePGP$sub_reg<-GSA
+(DATA_STECF_2_totrevenuePGP<-DATA_STECF_2_totrevenuePGP[,c(1,3,6,4,5)])
+(DATA_STECF_2_totrevenuePGP<-DATA_STECF_2_totrevenuePGP%>%unite("FS",c(sub_reg:vessel_length), remove = T))
+
+(FINALOLDDF<-rbind( FULLDF_DUP_FINAL_FINAL,DATA_STECF_2_totrevenuePGP))
+(FINALOLDDF%>%arrange(year,FS))
+(FINALOLDDF<-FINALOLDDF%>%filter(FS!="GSA9_DTS_VL2440_OTB_DWS"))
+# FINALOLDDF<-rbind(FINALOLDDF,FINALOLDDF[65,]) # the pgp of 2013 are missing so I duplicated the 2012 data
+# (FINALOLDDF[66,2]<-2013)
+
+# now we can multiply the DF with the available proportion by metier in 2014
+
+(FINALOLDDF$splittedvaluer<-FINALOLDDF$totrevenue*rep(FULLDF_2014_A_REV$PROP,6))
+
+(FINALOLDDF<-FINALOLDDF[,c(1,2,4)]) # THE final old DF frame ready and splitted for metier for REVENUES
+
+(REVENUE<-FULLDF_totland_totrev[,c(1,2,4)])
+colnames(REVENUE)[3]<-"REV_EURO"
+colnames(FINALOLDDF)[3]<-"REV_EURO"
+
+(REV_TOTAL_DF<-rbind(FINALOLDDF,REVENUE)) 
+(REV_TOTAL_DF_ALLSPEC<-REV_TOTAL_DF%>%arrange(year,FS))
+# This is ready for the file time series
+
+# -------------------------4)-Total landings------------------------ 
+
+
+(DATA_STECF_2_totlandings<-DATA_STECF_2%>%filter(variable_code=="totwghtlandg"))
+colnames(DATA_STECF_2_totlandings)[8]<-"totlandings"
+(DATA_STECF_2_totlandings<-DATA_STECF_2_totlandings[,c(1,2,3,4,5,8)])
+
+# I start with the DTS first
+
+(DATA_STECF_2_totlandingsDTS<-DATA_STECF_2_totlandings%>%filter(fishing_tech%in%FT1))
+(DATA_STECF_2_totlandingsDTS_NOTDUP<-DATA_STECF_2_totlandingsDTS%>%
+    filter(vessel_length=="VL0612"))
+DATA_STECF_2_totlandingsDTS_NOTDUP$metier<-"DEF"
+DATA_STECF_2_totlandingsDTS_NOTDUP$OTB<-"OTB"
+DATA_STECF_2_totlandingsDTS_NOTDUP$sub_reg<-GSA
+
+(DATA_STECF_2_totlandingsDTS_1218<-DATA_STECF_2_totlandingsDTS%>%filter(vessel_length=="VL1218"))
+(DATA_STECF_2_totlandingsDTS_1824<-DATA_STECF_2_totlandingsDTS%>%filter(vessel_length=="VL1824"))
+(DATA_STECF_2_totlandingsDTS_2440<-DATA_STECF_2_totlandingsDTS%>%filter(vessel_length=="VL2440"))
+(DATA_STECF_2_totlandingsDTS_2440<-rbind(DATA_STECF_2_totlandingsDTS_2440[1,],DATA_STECF_2_totlandingsDTS_2440))
+(DATA_STECF_2_totlandingsDTS_2440[1,3]<-2008)
+
+(DATA_STECF_2_totlandingsDTS_DUPPLIC1218<-rbind(DATA_STECF_2_totlandingsDTS_1218,DATA_STECF_2_totlandingsDTS_1218,DATA_STECF_2_totlandingsDTS_1218))
+(DATA_STECF_2_totlandingsDTS_DUPPLIC1824<-rbind(DATA_STECF_2_totlandingsDTS_1824,DATA_STECF_2_totlandingsDTS_1824,DATA_STECF_2_totlandingsDTS_1824))
+(DATA_STECF_2_totlandingsDTS_DUPPLIC2440<-rbind(DATA_STECF_2_totlandingsDTS_2440,DATA_STECF_2_totlandingsDTS_2440,DATA_STECF_2_totlandingsDTS_2440))
+
+(FULLDF_FINAL_DUPLIC<-rbind(DATA_STECF_2_totlandingsDTS_DUPPLIC1218,DATA_STECF_2_totlandingsDTS_DUPPLIC1824,DATA_STECF_2_totlandingsDTS_DUPPLIC2440))
+FULLDF_FINAL_DUPLIC$sub_reg<-GSA
+(FULLDF_FINAL_DUPLIC<-FULLDF_FINAL_DUPLIC%>%arrange(year,vessel_length))
+(FULLDF_FINAL_DUPLIC$metier<-rep(c("DEF","DWS","MDD"),3*6))
+FULLDF_FINAL_DUPLIC$OTB<-"OTB"
+
+FULLDF_DUP_FINAL_FINALX<-rbind(DATA_STECF_2_totlandingsDTS_NOTDUP,FULLDF_FINAL_DUPLIC)
+(FULLDF_DUP_FINAL_FINALX<-FULLDF_DUP_FINAL_FINALX%>%arrange(year,vessel_length))
+(FULLDF_DUP_FINAL_FINALX<-FULLDF_DUP_FINAL_FINALX[,c(1,4,5,8,7,3,6)])
+(FULLDF_DUP_FINAL_FINALX<-FULLDF_DUP_FINAL_FINALX%>%unite("FS",c(sub_reg:metier), remove = T))
+(FULLDF_DUP_FINAL_FINALX<-FULLDF_DUP_FINAL_FINALX%>%arrange(year,FS))
+
+# Now it is time of PGP with some LOA aggregation
+
+### PGP 
+DATA_STECF_2_totlandingsPGP<-DATA_STECF_2_totlandings%>%filter(fishing_tech%in%FT2)
+(DATA_STECF_2_totlandingsPGPP_NOTDUP<-DATA_STECF_2_totlandingsPGP%>%
+    filter(vessel_length%in%c("VL0612","VL0006"))%>%
+    group_by(sub_reg,country_code,fishing_tech,year)%>%
+    summarise(totlandings=sum(as.numeric(totlandings))))
+
+(DATA_STECF_2_totlandingsPGPP_NOTDUP$vessel_length<-"VL0012")
+(DATA_STECF_2_totlandingsPGP_NOTDUP_2<-DATA_STECF_2_totlandingsPGP%>%filter(vessel_length%in%"VL1218"))
+(DATA_STECF_2_totlandingsPGP<-rbind(DATA_STECF_2_totlandingsPGPP_NOTDUP,DATA_STECF_2_totlandingsPGP_NOTDUP_2))
+DATA_STECF_2_totlandingsPGP$sub_reg<-GSA
+(DATA_STECF_2_totlandingsPGP<-DATA_STECF_2_totlandingsPGP[,c(1,3,6,4,5)])
+(DATA_STECF_2_totlandingsPGP<-DATA_STECF_2_totlandingsPGP%>%unite("FS",c(sub_reg:vessel_length), remove = T))
+
+(FINALOLDDFX<-rbind( FULLDF_DUP_FINAL_FINALX,DATA_STECF_2_totlandingsPGP))
+(FINALOLDDFX%>%arrange(year,FS))
+(FINALOLDDFX<-FINALOLDDFX%>%filter(FS!="GSA9_DTS_VL2440_OTB_DWS"))
+
+# now we can multiply the DF with the available proportion by metier in 2014
+
+(FINALOLDDFX$splittedvaluer<-FINALOLDDFX$totlandings*rep(FULLDF_2014_B_LANDINGS$PROP,6))
+(FINALOLDDFX<-FINALOLDDFX[,c(1,2,4)])
+
+(FINALOLDDFX<-FINALOLDDFX%>%arrange(year,FS)) # this is the file ready for the old data for landings
+#NOW sum old plus new 
+
+(LAND<-FULLDF_totland_totrev[,c(1,2,3)])
+colnames(LAND)[3]<-"Landing_Kg"
+colnames(FINALOLDDFX)[3]<-"Landing_Kg"
+
+(LAND_TOTAL_DF_ALLSPEC<-rbind(FINALOLDDFX,LAND)) # this is ready for the file time series
+
+# This final DF is ready for the file time series
+
+# I repeat all the steps for each single species I need 
+
+#---------------------------------------5) S1 reparation (Landings Revenues) -----------------------------------------------
+# Here the data extraction for data from 2020 to 2014 for a single specie an example of species here is the "MUT GSA 9 "
+# NB for the DTS there are no missing data in GSA 9 for Italy and data are available from 2020 to 2014 however in the same area for PGP we found data from 2016 to 2014 only. 
+# Please check what your data properly. 
+SP<-"MUT"
+
+(DTS<-catch%>%
+   select(country_name,year,vessel_length,fishing_technique,gear_type,Target_Assemblage,sub_region,species,total_live_weight_landed_tonnes,total_value_of_landings_euro)%>%
+   filter(country_name==COUNTRY & sub_region==GSA & fishing_technique==FT1 & gear_type=="OTB" & species==SP ))
+
+# PGP data from 2016 to 2014 
+
+(PGP<-catch%>%
+    select(country_name,year,vessel_length,fishing_technique,gear_type,Target_Assemblage,sub_region,species,total_live_weight_landed_tonnes,total_value_of_landings_euro)%>%
+    filter(country_name==COUNTRY & sub_region==GSA & fishing_technique==FT2 & species==SP ))
+
+(PGP<-PGP%>%
+    select(year,vessel_length,sub_region,species,total_live_weight_landed_tonnes,gear_type,fishing_technique,Target_Assemblage,total_value_of_landings_euro)%>%
+    group_by(year,vessel_length,sub_region,species,gear_type,fishing_technique,Target_Assemblage)%>%
+    summarise(total_live_weight_landed_tonnes=sum(as.numeric(total_live_weight_landed_tonnes)),
+              total_value_of_landings_euro=sum(as.numeric(total_value_of_landings_euro))))
+
+(PGP<-PGP[,c(3,6,2,1,4,8,9)])
+
+(PGP1<-PGP%>%
+    filter(vessel_length%in%LOA2)%>%
+    group_by(sub_region,fishing_technique,year,species)%>%
+    summarise(total_live_weight_landed_tonnes=sum(as.numeric(total_live_weight_landed_tonnes)),
+              total_value_of_landings_euro=sum(as.numeric(total_value_of_landings_euro))))
+(PGP1$vessel_length<-"VL0012")
+(PGP1<-PGP1[,c(1,2,7,3,4,5,6)])
+
+(PGP2<-PGP%>%
+    filter(vessel_length==("VL1218"))%>%
+    group_by(sub_region,fishing_technique,vessel_length,year,species)%>%
+    summarise(total_live_weight_landed_tonnes=sum(as.numeric(total_live_weight_landed_tonnes)),
+              total_value_of_landings_euro=sum(as.numeric(total_value_of_landings_euro))))
+
+(PGP3<-rbind(PGP1,PGP2))
+(PGP4<-PGP3%>%unite("FS",c(sub_region:vessel_length), remove = T))
+
+# cleaned and conversion data from tons to KG
+(DTS$total_live_weight_landed_tonnes[DTS$total_live_weight_landed_tonnes=="NK"] <- 0.000001)
+(DTS$total_live_weight_landed_tonnes<-as.numeric(DTS$total_live_weight_landed_tonnes))
+(DTS$total_live_weight_landed_tonnes<-DTS$total_live_weight_landed_tonnes*1000 )# here I convert tons to kg (BEMTool needs kg)
+
+(PGP$total_live_weight_landed_tonnes[PGP$total_live_weight_landed_tonnes=="NK"] <- 0.000001)
+(PGP$total_live_weight_landed_tonnes<-as.numeric(PGP$total_live_weight_landed_tonnes))
+(PGP$total_live_weight_landed_tonnes<-PGP$total_live_weight_landed_tonnes*1000 )# here I convert tons to kg (BEMTool needs kg)
+
+(DTS<-DTS%>%
+    select(year,vessel_length,sub_region,fishing_technique,species,total_live_weight_landed_tonnes,gear_type,Target_Assemblage,total_value_of_landings_euro)%>%
+    group_by(year,vessel_length,sub_region,fishing_technique,species,gear_type,Target_Assemblage)%>%
+    summarise(total_live_weight_landed_tonnes=sum(as.numeric(total_live_weight_landed_tonnes)),
+              total_value_of_landings_euro=sum(as.numeric(total_value_of_landings_euro))))
+
+(DTS<-DTS[,c(3,4,2,6,7,1,5,8,9)])
+
+(DTSFUL<-DTS%>%unite("FS",c(sub_region:Target_Assemblage), remove = T))
+
+(FULLDF<-rbind(DTSFUL,PGP4))
+
+(FULLDF_totland_totrev<-FULLDF %>%
+    group_by(FS,year)%>%
+    summarise(total_live_weight_landed_tonnes=sum(as.numeric(total_live_weight_landed_tonnes)),
+              total_value_of_landings_euro=sum(as.numeric(total_value_of_landings_euro))))
+
+(FULLDF_totland_totrev<-FULLDF_totland_totrev%>%arrange(year,FS))
+(FULLDF_totland_totrev<-FULLDF_totland_totrev%>%filter( FS!="GSA9_DTS_VL2440_OTB_DWS")) # THIS IS Ready the DF of RECENT DATA 
+
+
+# please check if there is some missing data or fleet segments 
+length(2014:2020)*11
+# there is a missing in 2015 
+(FULLDF_totland_totrevmissX<-FULLDF_totland_totrev%>%filter(year==2016 & FS=="GSA9_PGP_VL1218"))
+(FULLDF_totland_totrevmissX$year<-2015)
+(FULLDF_totland_totrev<-rbind(FULLDF_totland_totrevmissX,FULLDF_totland_totrev))
+
+(FULLDF_totland_totrevmissX2<-FULLDF_totland_totrev%>%filter(year==2016 & FS=="GSA9_DTS_VL1218_OTB_DWS"))
+(FULLDF_totland_totrevmissX2$year<-2017)
+(FULLDF_totland_totrev<-rbind(FULLDF_totland_totrevmissX2,FULLDF_totland_totrev))
+
+(FULLDF_totland_totrevmissX3<-FULLDF_totland_totrev%>%filter(year==2016 & FS=="GSA9_DTS_VL1824_OTB_DWS"))
+(FULLDF_totland_totrevmissX3$year<-2017)
+(FULLDF_totland_totrev<-rbind(FULLDF_totland_totrevmissX3,FULLDF_totland_totrev))
+
+(FULLDF_totland_totrev<-FULLDF_totland_totrev%>%filter(!FS%in%c("GSA9_DTS_VL0612_OTB_DWS","GSA9_DTS_VL0612_OTB_MDD")))
+(FULLDF_totland_totrev<-FULLDF_totland_totrev%>%arrange(year,FS))
+
+
+(FULLDF_totland_totrev_2014<-FULLDF_totland_totrev%>%filter(year=="2014"))
+
+# below the proportion for the 2014 data. I will use this proportion for splitting the STECF 21-08 EU data landing
+
+############ TOTAL_REVENUE  ##########
+(FULLDF_2014_A<-FULLDF_totland_totrev_2014[,c(1,2,4)])
+
+(FULLDF_2014_A_NOT_DUP<-FULLDF_2014_A%>%filter(FS%in%"GSA9_DTS_VL0612_OTB_DEF"))
+
+(FULLDF_2014_A_DUP_1218<-FULLDF_2014_A%>%
+    filter(FS%in%c("GSA9_DTS_VL1218_OTB_DEF","GSA9_DTS_VL1218_OTB_DWS","GSA9_DTS_VL1218_OTB_MDD")))
+
+(FULLDF_2014_A_DUP_1824<-FULLDF_2014_A%>%
+    filter(FS%in%c("GSA9_DTS_VL1824_OTB_DEF","GSA9_DTS_VL1824_OTB_DWS","GSA9_DTS_VL1824_OTB_MDD")))
+
+(FULLDF_2014_A_DUP_2440<-FULLDF_2014_A%>%
+    filter(FS%in%c("GSA9_DTS_VL2440_OTB_DEF","GSA9_DTS_VL2440_OTB_MDD")))
+
+(FULLDF_2014_A_PGP<-FULLDF_2014_A%>%filter(FS%in%c("GSA9_PGP_VL0012","GSA9_PGP_VL1218")))
+
+(FULLDF_2014_A_NOT_DUP$PROP<-1)
+
+(FULLDF_2014_A_DUP_1218$tot<-sum(as.numeric(FULLDF_2014_A_DUP_1218$total_value_of_landings_euro)))
+(FULLDF_2014_A_DUP_1218$PROP<-as.numeric(FULLDF_2014_A_DUP_1218$total_value_of_landings_euro)/as.numeric(FULLDF_2014_A_DUP_1218$tot))
+(FULLDF_2014_A_DUP_1218<-FULLDF_2014_A_DUP_1218[,c(1,2,3,5)])
+
+(FULLDF_2014_A_DUP_1824$tot<-sum(as.numeric(FULLDF_2014_A_DUP_1218$total_value_of_landings_euro)))
+(FULLDF_2014_A_DUP_1824$PROP<-as.numeric(FULLDF_2014_A_DUP_1824$total_value_of_landings_euro)/as.numeric(FULLDF_2014_A_DUP_1824$tot))
+(FULLDF_2014_A_DUP_1824<-FULLDF_2014_A_DUP_1824[,c(1,2,3,5)])
+
+(FULLDF_2014_A_DUP_2440$tot<-sum(as.numeric(FULLDF_2014_A_DUP_2440$total_value_of_landings_euro)))
+(FULLDF_2014_A_DUP_2440$PROP<-as.numeric(FULLDF_2014_A_DUP_2440$total_value_of_landings_euro)/as.numeric(FULLDF_2014_A_DUP_2440$tot))
+(FULLDF_2014_A_DUP_2440<-FULLDF_2014_A_DUP_2440[,c(1,2,3,5)])
+
+(FULLDF_2014_A_PGP$PROP<-1)
+
+(FULLDF_2014_A_REV<-rbind (FULLDF_2014_A_NOT_DUP,FULLDF_2014_A_DUP_1218,FULLDF_2014_A_DUP_1824,FULLDF_2014_A_DUP_2440,FULLDF_2014_A_PGP))
+
+
+################# TOTAL_LANDINGS ####################
+
+(FULLDF_2014_B<-FULLDF_totland_totrev_2014[,c(1,2,3)])
+
+(FULLDF_2014_B_NOT_DUP<-FULLDF_2014_B%>%filter(FS%in%"GSA9_DTS_VL0612_OTB_DEF"))
+
+(FULLDF_2014_B_DUP_1218<-FULLDF_2014_B%>%
+    filter(FS%in%c("GSA9_DTS_VL1218_OTB_DEF","GSA9_DTS_VL1218_OTB_DWS","GSA9_DTS_VL1218_OTB_MDD")))
+
+(FULLDF_2014_B_DUP_1824<-FULLDF_2014_B%>%
+    filter(FS%in%c("GSA9_DTS_VL1824_OTB_DEF","GSA9_DTS_VL1824_OTB_DWS","GSA9_DTS_VL1824_OTB_MDD")))
+
+(FULLDF_2014_B_DUP_2440<-FULLDF_2014_B%>%
+    filter(FS%in%c("GSA9_DTS_VL2440_OTB_DEF","GSA9_DTS_VL2440_OTB_MDD")))
+
+(FULLDF_2014_B_PGP<-FULLDF_2014_B%>%filter(FS%in%c("GSA9_PGP_VL0012","GSA9_PGP_VL1218")))
+
+(FULLDF_2014_B_NOT_DUP$PROP<-1)
+
+(FULLDF_2014_B_DUP_1218$tot<-sum(as.numeric(FULLDF_2014_B_DUP_1218$total_live_weight_landed_tonnes)))
+(FULLDF_2014_B_DUP_1218$PROP<-as.numeric(FULLDF_2014_B_DUP_1218$total_live_weight_landed_tonnes)/as.numeric(FULLDF_2014_B_DUP_1218$tot))
+(FULLDF_2014_B_DUP_1218<-FULLDF_2014_B_DUP_1218[,c(1,2,3,5)])
+
+(FULLDF_2014_B_DUP_1824$tot<-sum(as.numeric(FULLDF_2014_B_DUP_1824$total_live_weight_landed_tonnes)))
+(FULLDF_2014_B_DUP_1824$PROP<-as.numeric(FULLDF_2014_B_DUP_1824$total_live_weight_landed_tonnes)/as.numeric(FULLDF_2014_B_DUP_1824$tot))
+(FULLDF_2014_B_DUP_1824<-FULLDF_2014_B_DUP_1824[,c(1,2,3,5)])
+
+(FULLDF_2014_B_DUP_2440$tot<-sum(as.numeric(FULLDF_2014_B_DUP_2440$total_live_weight_landed_tonnes)))
+(FULLDF_2014_B_DUP_2440$PROP<-as.numeric(FULLDF_2014_B_DUP_2440$total_live_weight_landed_tonnes)/as.numeric(FULLDF_2014_B_DUP_2440$tot))
+(FULLDF_2014_B_DUP_2440<-FULLDF_2014_B_DUP_2440[,c(1,2,3,5)])
+
+(FULLDF_2014_B_PGP$PROP<-1)
+
+(FULLDF_2014_B_LANDINGS<-rbind(FULLDF_2014_B_NOT_DUP,FULLDF_2014_B_DUP_1218,FULLDF_2014_B_DUP_1824,FULLDF_2014_B_DUP_2440,FULLDF_2014_B_PGP))
+
+# now the two DF with the proportion by metier are ready
+
+#below the data extraction from 2006 to 2013
+# Please add you directory 
+dir<-"D:/Andrea/Desktop/NEW_BEMTool/STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment.xlsx" #this for data from 2008 to 2013 
+
+(dataYY2008_2011<-read_xlsx(dir, sheet = 9))
+(dataYY2012_2016<-read.csv2("D:/Andrea/Desktop/NEW_BEMTool/STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment_2.csv",sep=";", header=T)) #there where some problems in the extraction of the excel so Y saved separately the second sheet I needed
+#prepare the two data set 
+SP<-"MUT"
+CC<-"ITA"
+FT1<-"DTS"
+FT2<-"PGP"
+
+
+(dataYY2008_2011<-dataYY2008_2011%>%select(country_code,year,supra_reg,fishing_tech,vessel_length,variable_code,value,unit,species_code,sub_reg))
+(dataYY2012_2016<-dataYY2012_2016%>%select(country_code,year,supra_reg,fishing_tech,vessel_length,variable_code,value,unit,species_code,sub_reg))
+data<-rbind(dataYY2008_2011,dataYY2012_2016)
+
+(dataDTS_not_DUP<-data%>%
+    filter(country_code==CC & year%in%c(2008:2013) & supra_reg=="AREA37" & fishing_tech==FT1 & sub_reg=="sa 9" & vessel_length=="VL0612" & species_code==SP))
+
+(dataDTS_DUP<-data%>%
+    filter(country_code==CC & year%in%c(2008:2013) & supra_reg=="AREA37" & fishing_tech==FT1 & sub_reg=="sa 9"& vessel_length%in%c("VL1218","VL1824","VL2440") & species_code==SP))
+
+(dataDTS_PGP<-data%>%
+    filter(country_code==CC & year%in%c(2008:2013) & supra_reg=="AREA37"& fishing_tech==FT2& sub_reg=="sa 9"& vessel_length%in%c("VL0006","VL0612","VL1218") & species_code==SP))
+
+(DATA_STECF<-rbind(dataDTS_not_DUP,dataDTS_DUP,dataDTS_PGP))
+
+
+(spec<-SP)
+
+# below the total landing and total revenue by gsa and by LOA
+(DATA_STECF_2<-DATA_STECF%>%
+    filter(species_code%in%spec)%>%
+    group_by(sub_reg,country_code,year,fishing_tech,vessel_length,variable_code,unit)%>%
+    summarise(value=sum(as.numeric(value))))
+
+#----------------------------------------6) Total revenue S1 --------------------------------------
+
+(DATA_STECF_2_totrevenue<-DATA_STECF_2%>%filter(variable_code=="totvallandg"))
+colnames(DATA_STECF_2_totrevenue)[8]<-"totrevenue"
+(DATA_STECF_2_totrevenue<-DATA_STECF_2_totrevenue[,c(1,2,3,4,5,8)])
+
+# below the filter split and duplication of the LOA that should be divided by METIERS 
+###  DTS
+(DATA_STECF_2_totrevenueDTS<-DATA_STECF_2_totrevenue%>%filter(fishing_tech%in%FT1))
+
+(DATA_STECF_2_totrevenueDTS_NOTDUP<-DATA_STECF_2_totrevenueDTS%>%
+    filter(vessel_length=="VL0612"))
+DATA_STECF_2_totrevenueDTS_NOTDUP$metier<-"DEF"
+DATA_STECF_2_totrevenueDTS_NOTDUP$OTB<-"OTB"
+DATA_STECF_2_totrevenueDTS_NOTDUP$sub_reg<-GSA
+
+(DATA_STECF_2_totrevenueDTS_1218<-DATA_STECF_2_totrevenueDTS%>%filter(vessel_length=="VL1218"))
+(DATA_STECF_2_totrevenueDTS_1824<-DATA_STECF_2_totrevenueDTS%>%filter(vessel_length=="VL1824"))
+(DATA_STECF_2_totrevenueDTS_2440<-DATA_STECF_2_totrevenueDTS%>%filter(vessel_length=="VL2440"))
+
+(DATA_STECF_2_totrevenueDTS_2440<-rbind(DATA_STECF_2_totrevenueDTS_2440[1,],DATA_STECF_2_totrevenueDTS_2440))
+(DATA_STECF_2_totrevenueDTS_2440[1,3]<-2008)
+(DATA_STECF_2_totrevenueDTS_DUPPLIC1218<-rbind(DATA_STECF_2_totrevenueDTS_1218,DATA_STECF_2_totrevenueDTS_1218,DATA_STECF_2_totrevenueDTS_1218))
+(DATA_STECF_2_totrevenueDTS_DUPPLIC1824<-rbind(DATA_STECF_2_totrevenueDTS_1824,DATA_STECF_2_totrevenueDTS_1824,DATA_STECF_2_totrevenueDTS_1824))
+(DATA_STECF_2_totrevenueDTS_DUPPLIC2440<-rbind(DATA_STECF_2_totrevenueDTS_2440,DATA_STECF_2_totrevenueDTS_2440,DATA_STECF_2_totrevenueDTS_2440))
+
+(FULLDF_FINAL_DUPLIC<-rbind(DATA_STECF_2_totrevenueDTS_DUPPLIC1218,DATA_STECF_2_totrevenueDTS_DUPPLIC1824,DATA_STECF_2_totrevenueDTS_DUPPLIC2440))
+FULLDF_FINAL_DUPLIC$sub_reg<-GSA
+(FULLDF_FINAL_DUPLIC<-FULLDF_FINAL_DUPLIC%>%arrange(year,vessel_length))
+(FULLDF_FINAL_DUPLIC$metier<-rep(c("DEF","DWS","MDD"), 3*6))
+
+(FULLDF_FINAL_DUPLIC$OTB<-"OTB")
+
+(FULLDF_DUP_FINAL_FINAL<-rbind(DATA_STECF_2_totrevenueDTS_NOTDUP,FULLDF_FINAL_DUPLIC))
+(FULLDF_DUP_FINAL_FINAL<-FULLDF_DUP_FINAL_FINAL%>%arrange(year,vessel_length))
+(FULLDF_DUP_FINAL_FINAL<-FULLDF_DUP_FINAL_FINAL[,c(1,4,5,8,7,3,6)])
+(FULLDF_DUP_FINAL_FINAL<-FULLDF_DUP_FINAL_FINAL%>%unite("FS",c(sub_reg:metier), remove = T))
+(FULLDF_DUP_FINAL_FINAL<-FULLDF_DUP_FINAL_FINAL%>%arrange(year,FS))
+
+### PGP 
+DATA_STECF_2_totrevenuePGP<-DATA_STECF_2_totrevenue%>%filter(fishing_tech%in%FT2)
+(DATA_STECF_2_totrevenuePGP_NOTDUP<-DATA_STECF_2_totrevenuePGP%>%
+    filter(vessel_length%in%c("VL0612","VL0006"))%>%
+    group_by(sub_reg,country_code,fishing_tech,year)%>%
+    summarise(totrevenue=sum(as.numeric(totrevenue))))
+
+(DATA_STECF_2_totrevenuePGP_NOTDUP$vessel_length<-"VL0012")
+
+(DATA_STECF_2_totrevenuePGP_NOTDUP_2<-DATA_STECF_2_totrevenuePGP%>%filter(vessel_length%in%"VL1218"))
+(DATA_STECF_2_totrevenuePGP<-rbind(DATA_STECF_2_totrevenuePGP_NOTDUP,DATA_STECF_2_totrevenuePGP_NOTDUP_2))
+DATA_STECF_2_totrevenuePGP$sub_reg<-GSA
+(DATA_STECF_2_totrevenuePGP<-DATA_STECF_2_totrevenuePGP[,c(1,3,6,4,5)])
+(DATA_STECF_2_totrevenuePGP<-DATA_STECF_2_totrevenuePGP%>%unite("FS",c(sub_reg:vessel_length), remove = T))
+
+(FINALOLDDF<-rbind( FULLDF_DUP_FINAL_FINAL,DATA_STECF_2_totrevenuePGP))
+(FINALOLDDF%>%arrange(year,FS))
+(FINALOLDDF<-FINALOLDDF%>%filter(FS!="GSA9_DTS_VL2440_OTB_DWS"))
+FINALOLDDF<-rbind(FINALOLDDF,FINALOLDDF[65,]) # the pgp of 2013 are missing so I duplicated the 2012 data
+(FINALOLDDF[66,2]<-2013)
+
+# now we can multiply the DF with the available proportion by metier in 2014
+
+(FINALOLDDF$splittedvaluer<-FINALOLDDF$totrevenue*rep(FULLDF_2014_A_REV$PROP,6))
+
+(FINALOLDDF<-FINALOLDDF[,c(1,2,4)]) # THE final old DF frame ready and splitted for metier for REVENUES
+
+(REV<-FULLDF_totland_totrev[,c(1,2,4)])
+colnames(REV)[3]<-"REV_EURO"
+colnames(FINALOLDDF)[3]<-"REV_EURO"
+
+(REV_TOTAL_DF<-rbind(FINALOLDDF,REV)) 
+(REV_TOTAL_DF_MUT<-REV_TOTAL_DF%>%arrange(year,FS))
+#this is ready for the file time series
+
+#---------------------------------------7)-Total Landings S1 -------------------------------------------------------
+
+
+(DATA_STECF_2_totlandings<-DATA_STECF_2%>%filter(variable_code=="totwghtlandg"))
+colnames(DATA_STECF_2_totlandings)[8]<-"totlandings"
+(DATA_STECF_2_totlandings<-DATA_STECF_2_totlandings[,c(1,2,3,4,5,8)])
+
+# below the fileter split and duplication of the LOA that should be divided by METIERS 
+###  DTS
+(DATA_STECF_2_totlandingsDTS<-DATA_STECF_2_totlandings%>%filter(fishing_tech%in%FT1))
+
+(DATA_STECF_2_totlandingsDTS_NOTDUP<-DATA_STECF_2_totlandingsDTS%>%
+    filter(vessel_length=="VL0612"))
+DATA_STECF_2_totlandingsDTS_NOTDUP$metier<-"DEF"
+DATA_STECF_2_totlandingsDTS_NOTDUP$OTB<-"OTB"
+DATA_STECF_2_totlandingsDTS_NOTDUP$sub_reg<-GSA
+
+(DATA_STECF_2_totlandingsDTS_1218<-DATA_STECF_2_totlandingsDTS%>%filter(vessel_length=="VL1218"))
+(DATA_STECF_2_totlandingsDTS_1824<-DATA_STECF_2_totlandingsDTS%>%filter(vessel_length=="VL1824"))
+(DATA_STECF_2_totlandingsDTS_2440<-DATA_STECF_2_totlandingsDTS%>%filter(vessel_length=="VL2440"))
+(DATA_STECF_2_totlandingsDTS_2440<-rbind(DATA_STECF_2_totlandingsDTS_2440[1,],DATA_STECF_2_totlandingsDTS_2440))
+(DATA_STECF_2_totlandingsDTS_2440[1,3]<-2008)
+
+(DATA_STECF_2_totlandingsDTS_DUPPLIC1218<-rbind(DATA_STECF_2_totlandingsDTS_1218,DATA_STECF_2_totlandingsDTS_1218,DATA_STECF_2_totlandingsDTS_1218))
+(DATA_STECF_2_totlandingsDTS_DUPPLIC1824<-rbind(DATA_STECF_2_totlandingsDTS_1824,DATA_STECF_2_totlandingsDTS_1824,DATA_STECF_2_totlandingsDTS_1824))
+(DATA_STECF_2_totlandingsDTS_DUPPLIC2440<-rbind(DATA_STECF_2_totlandingsDTS_2440,DATA_STECF_2_totlandingsDTS_2440,DATA_STECF_2_totlandingsDTS_2440))
+
+(FULLDF_FINAL_DUPLIC<-rbind(DATA_STECF_2_totlandingsDTS_DUPPLIC1218,DATA_STECF_2_totlandingsDTS_DUPPLIC1824,DATA_STECF_2_totlandingsDTS_DUPPLIC2440))
+FULLDF_FINAL_DUPLIC$sub_reg<-GSA
+(FULLDF_FINAL_DUPLIC<-FULLDF_FINAL_DUPLIC%>%arrange(year,vessel_length))
+(FULLDF_FINAL_DUPLIC$metier<-rep(c("DEF","DWS","MDD"),3*6))
+
+FULLDF_FINAL_DUPLIC$OTB<-"OTB"
+
+FULLDF_DUP_FINAL_FINALX<-rbind(DATA_STECF_2_totlandingsDTS_NOTDUP,FULLDF_FINAL_DUPLIC)
+(FULLDF_DUP_FINAL_FINALX<-FULLDF_DUP_FINAL_FINALX%>%arrange(year,vessel_length))
+(FULLDF_DUP_FINAL_FINALX<-FULLDF_DUP_FINAL_FINALX[,c(1,4,5,8,7,3,6)])
+
+(FULLDF_DUP_FINAL_FINALX<-FULLDF_DUP_FINAL_FINALX%>%unite("FS",c(sub_reg:metier), remove = T))
+(FULLDF_DUP_FINAL_FINALX<-FULLDF_DUP_FINAL_FINALX%>%arrange(year,FS))
+
+### PGP 
+DATA_STECF_2_totlandingsPGP<-DATA_STECF_2_totlandings%>%filter(fishing_tech%in%FT2)
+(DATA_STECF_2_totlandingsPGPP_NOTDUP<-DATA_STECF_2_totlandingsPGP%>%
+    filter(vessel_length%in%c("VL0612","VL0006"))%>%
+    group_by(sub_reg,country_code,fishing_tech,year)%>%
+    summarise(totlandings=sum(as.numeric(totlandings))))
+
+(DATA_STECF_2_totlandingsPGPP_NOTDUP$vessel_length<-"VL0012")
+(DATA_STECF_2_totlandingsPGP_NOTDUP_2<-DATA_STECF_2_totlandingsPGP%>%filter(vessel_length%in%"VL1218"))
+(DATA_STECF_2_totlandingsPGP<-rbind(DATA_STECF_2_totlandingsPGPP_NOTDUP,DATA_STECF_2_totlandingsPGP_NOTDUP_2))
+DATA_STECF_2_totlandingsPGP$sub_reg<-GSA
+(DATA_STECF_2_totlandingsPGP<-DATA_STECF_2_totlandingsPGP[,c(1,3,6,4,5)])
+(DATA_STECF_2_totlandingsPGP<-DATA_STECF_2_totlandingsPGP%>%unite("FS",c(sub_reg:vessel_length), remove = T))
+
+(FINALOLDDFX<-rbind( FULLDF_DUP_FINAL_FINALX,DATA_STECF_2_totlandingsPGP))
+(FINALOLDDFX%>%arrange(year,FS))
+(FINALOLDDFX<-FINALOLDDFX%>%filter(FS!="GSA9_DTS_VL2440_OTB_DWS"))
+FINALOLDDFX<-rbind(FINALOLDDFX,FINALOLDDFX[65,]) # the pgp of 2013 are missing so I duplicated the 2012 data
+(FINALOLDDFX[66,2]<-2013)
+
+# now we can multiply the DF with the available proportion by metier in 2014
+
+(FINALOLDDFX$splittedvaluer<-FINALOLDDFX$totlandings*rep(FULLDF_2014_B_LANDINGS$PROP,6))
+(FINALOLDDFX<-FINALOLDDFX[,c(1,2,4)])
+
+(FINALOLDDFX<-FINALOLDDFX%>%arrange(year,FS)) # this is the file ready for the old data for landings
+#NOW sum old plus new 
+
+(LANDX<-FULLDF_totland_totrev[,c(1,2,3)])
+colnames(LANDX)[3]<-"Landing_Kg"
+colnames(FINALOLDDFX)[3]<-"Landing_Kg"
+(LAND_TOTAL_DF_MUT<-rbind(FINALOLDDFX,LANDX)) # this is ready for the file time series
+
+# the final step is to sum up old landings with the new DF
+###################### FUEL COSTS; labourcosts; maintenancecosts; othercosts  ###
+
+# Input needed: use the templates in the package distributed
+
+#Costs_or = read.table("D:/Andrea/Desktop/NEW_BEMTool/Costs_by_FS.csv",sep=",",header=T)  # The times series of the costs by fleet segment
+(key_table_or=read.table("D:/Andrea/Desktop/NEW_BEMTool/FS_MET.csv", sep=",", header=T)) # The results of the GLMs chosen for each type of cost and each fleet segment
+(key_table_or<-key_table_or[c(1:18),])
+(key_table_or$Fleet_segment<-c(rep("GSA9_DTS_VL1218_OTB",6),rep("GSA9_DTS_VL1824_OTB",6),rep("GSA9_DTS_VL2440_OTB",6)))
+key_table_or$Type_of_cost[key_table_or$Type_of_cost=="fuel_costs"]<-"fuelcosts"
+key_table_or$Type_of_cost[key_table_or$Type_of_cost=="labour_costs"]<-"labourcosts"
+key_table_or$Type_of_cost[key_table_or$Type_of_cost=="other_costs"]<-"othervariablecosts"
+
+
+#Eff=read.table("D:/Andrea/Desktop/NEW_BEMTool/Effort_Rev_metier.csv",header=T, sep=",") # The effort time series for each fleet segment, associated to the metier used by everyone
+#-------------------------------------------------------------------------------
+# creating the "Costs_or" data frame 
+# fuelcosts
+
+(year<-c(2008:2020))
+# Select your fleet segment.
+(Fleet_segment1<-rep("GSA9_DTS_VL1218_OTB",length(year)))
+(Fleet_segment2<-rep("GSA9_DTS_VL1824_OTB",length(year)))
+(Fleet_segment3<-rep("GSA9_DTS_VL2440_OTB",length(year)))
+
+(Fleet_segment<-c(Fleet_segment1,Fleet_segment2,Fleet_segment3))
+(variable_name<-rep("fuelcosts",length(Fleet_segment)))
+VL1218value<-1
+VL1824value<-2
+VL2440value<-3
+(fuel_costs<-c(VL1218value,VL1824value,VL2440value)) # insert here the specific costs for each fleet segments that should be desegregated for example VL1218, VL1824 and VL2440
+(value<-c(rep(VL1218value,length(year)),rep(VL1824value,length(year)),rep(VL2440value,length(year)))) # if the costs change by year add those manually
+(fishing_tech<-rep(FT1,length(Fleet_segment)))
+(vessel_length<-c(rep("VL1218",length(year)),rep("VL1824",length(year)),rep("VL2440",length(year))))
+(DF_fuel<-data.frame(Fleet_segment,fishing_tech,vessel_length,year,variable_name,value))
+
+# 2 labour_costs
+
+(variable_name<-rep("labourcosts",length(Fleet_segment)))
+VL1218value<-1
+VL1824value<-2
+VL2440value<-3
+(labour_costs<-c(VL1218value,VL1824value,VL2440value)) # insert here the specific costs for each fleet segments that should be desegregated for example VL1218, VL1824 and VL2440
+(value<-c(rep(VL1218value,length(year)),rep(VL1824value,length(year)),rep(VL2440value,length(year)))) # if the costs change by year add those manually
+(fishing_tech<-rep(FT1,length(Fleet_segment)))
+(vessel_length<-c(rep("VL1218",length(year)),rep("VL1824",length(year)),rep("VL2440",length(year))))
+
+
+(DF_labour_costs<-data.frame(Fleet_segment,fishing_tech,vessel_length,year,variable_name,value))
+
+# 3 othervariablecosts
+
+(variable_name<-rep("othervariablecosts",length(Fleet_segment)))
+VL1218value<-1
+VL1824value<-2
+VL2440value<-3
+(other_costs<-c(VL1218value,VL1824value,VL2440value)) # insert here the specific costs for each fleet segments that should be desegregated for example VL1218, VL1824 and VL2440
+(value<-c(rep(VL1218value,length(year)),rep(VL1824value,length(year)),rep(VL2440value,length(year)))) # if the costs change by year add those manually
+
+(fishing_tech<-rep(FT1,length(Fleet_segment)))
+(vessel_length<-c(rep("VL1218",length(year)),rep("VL1824",length(year)),rep("VL2440",length(year))))
+
+
+
+(DF_other_costs<-data.frame(Fleet_segment,fishing_tech,vessel_length,year,variable_name,value))
+
+
+(FINAL_NEW_DF<-rbind(DF_fuel,DF_labour_costs,DF_other_costs))
+Costs_or<-FINAL_NEW_DF
+
+#-------------------------------------------------------------------------------
+# Creating the "Effort_Rev_metier.csv" data frame
+
+
+(year<-c(2008:2020))
+# Select your fleet segment.
+(Fleet_segment1<-rep("GSA9_DTS_VL1218_OTB",length(year)))
+(Fleet_segment2<-rep("GSA9_DTS_VL1824_OTB",length(year)))
+(Fleet_segment3<-rep("GSA9_DTS_VL2440_OTB",length(year)))
+(Fleet_segment<-c(Fleet_segment1,Fleet_segment2,Fleet_segment3))
+(Fleet_segmentBIG<-c(Fleet_segment,Fleet_segment,Fleet_segment))
+(Metier<-c(rep(rep("OTB_DES_>=40_0_0",length(year)),3),rep(rep("OTB_DWS_>=40_0_0",length(year)),3), rep(rep("OTB_MDD_>=40_0_0",length(year)),3)))
+(FD_KW<-rep(rep(1:13,3),3)) # these numbers are just some example please insert your available data
+(Lab_expl_var<-rep(rep(1:13,3),3)) # these numbers are just some example insert your available data
+(vessel_length<-c(rep("VL1218",length(year)),rep("VL1824",length(year)), rep("VL2440",length(year))))
+(vessel_length<-rep(vessel_length,3))
+(year<-rep(year,3))
+(year<-rep(year,3))
+(gear<-rep("OTB",length(year)))
+(DF_EFF<-data.frame(gear,vessel_length,year,Fleet_segmentBIG,Metier,FD_KW,Lab_expl_var))
+
+Eff<-DF_EFF
+
+# ------------------------------------------------------------------------------
+
+(TC=unique(as.character(Costs_or$variable_name)))
+for (ii in 1:length(TC)){
+  print(TC[ii])
+  key_table=key_table_or[key_table_or$Type_of_cost==TC[ii],]  
+  Costs=Costs_or[Costs_or$variable_name==TC[ii],]
+  # check if the number of coefficients is correct
+  
+  fs=unique(key_table$Fleet_segment)
+  Costs_disag_total=Eff[1,]
+  Costs_disag_total$variable_name=Costs$variable_name[1]
+  Costs_disag_total$value=999
+  Costs_disag_total=Costs_disag_total[,c(1:5,8,9)]
+  Costs_disag_total1=Eff[1,]
+  Costs_disag_total1$variable_name=Costs$variable_name[1]
+  Costs_disag_total1$value=999
+  Costs_disag_total1=Costs_disag_total1[,c(1:5,8,9)]
+  
+  #Costs_disag_total[1,]<-NA
+  
+  for (flee in 1:length(fs)){
+    
+    Costs_temp=Costs[Costs$ Fleet_segment==fs[flee],]
+    Eff_temp=Eff[Eff$Fleet_segment==fs[flee],]
+    key_table=key_table_or[key_table_or$Fleet_segment==fs[flee] & key_table_or$Type_of_cost==TC[ii],]
+    # CHECKS
+    YEARS_COSTS=unique(Costs_temp$year)
+    YEARS_EFF= unique(Eff_temp$year)
+    
+    if(all(YEARS_COSTS)==all(YEARS_EFF))
+    {
+      print(fs[flee])
+      print("All the years in Costs.csv file can be disaggregated",quote=F)
+    } else {
+      print(fs[flee])  
+      print("The years in Costs.csv and in Effort.csv do not match. Only the data of the years present in both files will be disaggregated.",quote=F)
+    }
+    
+    option=key_table[key_table$Fleet_segment==fs[flee],]$Option[1]  
+    met1=unique(Eff[Eff$Fleet_segment==fs[flee],]$Metier)
+    met_key=unique(key_table[key_table$Fleet_segment==fs[flee],])
+    
+    met_key=met_key[met_key$Explanatory_variable!="FD_KW",]$Explanatory_variable
+    
+    if((option == 1 | option == 2 ) & all(met1 %in% met_key)) {
+      print(fs[flee],quote=F)
+      print(paste("The disaggregation is possible with the provided data for",fs[flee]),quote=F)
+    } else if (option == 3 & (length(met1)>=1)){
+      print(fs[flee],quote=F)
+      print(paste("The disaggregation is possible with the provided data for",fs[flee]),quote=F)
+    } else {
+      print(paste("The disaggregation is not possible with the provided data for",fs[flee]),". Please check if in the effort data all  years for each metier are provided.",quote=F)  
+    }
+    
+    Costs_disag= Eff_temp[-c(ncol(Eff_temp)-1,ncol(Eff_temp))]
+    Costs_disag$variable_name=Costs$variable_name[1]
+    Costs_disag$value=999
+    
+    #metier=unique(Effort$Metier)
+    
+    if (Costs$variable_name[1]!="labourcosts"){
+      
+      for (i in 1:nrow(Costs_disag)){
+        
+        if (key_table$Option[1]==1){
+          
+          Costs_disag$value[i]= as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable)==as.character(Costs_disag$Metier[i]) & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient)) + as.numeric(as.character(Eff_temp[i,]$FD_KW) ) *  as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable) =="FD_KW" & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient) )
+          
+        } else if (key_table$Option[1] ==2 & nrow(key_table[as.character(key_table$Explanatory_variable) ==paste("FD_KW*",Costs_disag$Metier[i],sep="") & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),])==1) {
+          
+          Costs_disag$value[i]= as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable)==as.character(Costs_disag$Metier[i])& as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient)) + as.numeric(as.character(Eff_temp[i,]$FD_KW)) *  as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable) =="FD_KW" & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient) ) +  as.numeric(as.character(Eff_temp[i,]$FD_KW)) *  as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable) ==paste("FD_KW*",Costs_disag$Metier[i],sep="") & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient))
+          
+        } else if ( (key_table$Option[1] ==2 & nrow(key_table[as.character(key_table$Explanatory_variable) ==paste("FD_KW*",Costs_disag$Metier[i],sep="") & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),])==0) ) {
+          Costs_disag$value[i]= as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable)==as.character(Costs_disag$Metier[i]) & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient)) + as.numeric(as.character(Eff_temp[i,]$FD_KW)) *  as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable) =="FD_KW",]$Coefficient))
+        } else if ( key_table$Option[1] ==3){
+          Costs_disag$value[i]= Eff_temp[i,]$FD_KW *  key_table[as.character(key_table$Explanatory_variable) =="FD_KW" & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient
+        }
+      }
+    } else if (Costs_temp$variable_name[1]=="labourcosts"){
+      
+      for (i in 1:nrow(Costs_disag)){
+        
+        if (key_table$Option[1]==1){
+          
+          Costs_disag$value[i]= as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable)==as.character(Costs_disag$Metier[i]) & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient)) + as.numeric(as.character(Eff_temp[i,]$Lab_expl_var)) *  as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable) =="Lab_expl_var" & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient))
+          
+        } else if (key_table$Option[1] ==2 & nrow(key_table[as.character(key_table$Explanatory_variable) ==paste("Lab_expl_var*",Costs_disag$Metier[i],sep="") & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),])==1) {
+          
+          Costs_disag$value[i]= as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable)==as.character(Costs_disag$Metier[i]) & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient)) + as.numeric(as.character(Eff_temp[i,]$Lab_expl_var)) *  as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable) =="Lab_expl_var" & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient))  +  as.numeric(as.character(Eff_temp[i,]$Lab_expl_var)) *  as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable) ==paste("Lab_expl_var*",Costs_disag$Metier[i],sep="") & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient) )
+          
+        } else if ( (key_table$Option[1] ==2 & nrow(key_table[as.character(key_table$Explanatory_variable) ==paste("Lab_expl_var*",Costs_disag$Metier[i],sep="") & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),])==0) ) {
+          Costs_disag$value[i]= as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable)==as.character(Costs_disag$Metier[i]) & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient)) + as.numeric(as.character(Eff_temp[i,]$Lab_expl_var)) *  as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable) =="Lab_expl_var",]$Coefficient))
+        } else if ( key_table$Option[1] ==3){
+          Costs_disag$value[i]= as.numeric(as.character(Eff_temp[i,]$Lab_expl_var)) *  as.numeric(as.character(key_table[ as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient))
+          #Costs_disag$value[i]= as.numeric(as.character(Eff_temp[i,]$Lab_expl_var)) *  as.numeric(as.character(key_table[as.character(key_table$Explanatory_variable)==as.character(Costs_disag$Metier[i]) & as.character(key_table$Fleet_segment)==as.character(Costs_disag$Fleet_segment[i]),]$Coefficient))
+          
+        }
+      }
+    }
+    Costs_disag_total= rbind(Costs_disag_total,Costs_disag)
+    
+    
+  } 
+  # "for" cycling on the fleet segment
+  
+  if(ii>=2){   
+    Costs_disag_total=rbind(bkp,Costs_disag_total[-1,])
+    
+  }  else {
+    Costs_disag_total=rbind(Costs_disag_total[-1,])
+  }
+  bkp=Costs_disag_total
+  # 
+  
+  
+}  # close the type of costs "for"
+
+write.table(Costs_disag_total,"Costs_disaggregated.csv",sep=";",row.names=F)
+print("Disaggregation executed.",quote=F)
+
+# now we need to run a check of the disaggregation 
+library(tidyverse)
+library(data.table)
+library(readxl)
+#Costs_FS = read.table("Costs_by_FS.csv",sep=",",header=T)
+#Costs_MET = read.table("Costs_disaggregated.csv",sep=";",header=T)
+Costs_MET<-Costs_disag_total
+Costs_FS<-Costs_or
+# Comparison between the costs by fleet segment and the sum of the costs disaggregated by metier
+
+Costs_sum= aggregate(Costs_MET$value,by=list(Costs_MET$year, Costs_MET$Fleet_segment,Costs_MET$variable_name ),FUN="sum")
+colnames(Costs_sum)=c("year","Fleet_segment","variable_name","Sum_costs_by_metier")
+
+Merge=merge(Costs_sum,Costs_FS,by=c("year","Fleet_segment","variable_name") )[,c(1,2,3,4,7)]
+colnames(Merge)=c("year","Fleet_segment","variable_name","Sum_costs_by_metier","Costs_by_fleet_segment")
+
+Merge$DIFF=round((Merge$Sum_costs_by_metier -  Merge$Costs_by_fleet_segment)/ Merge$Costs_by_fleet_segment*100,1)
+
+print(Merge)
+
+write.table(Merge,"Consistency_checks.csv",sep=";",row.names=F)
+
+# if the check is ok you can add the fleet segments that do not need disaggregation such as VL0612 and all PGP 
+year<-c(2008:2020)
+
+FT1<-"DTS"
+FT2<-"PGP"
+# Select your fleet segment.
+(Fleet_segment<-c( rep("GSA9_DTS_VL0612_OTB_DEF",length(year)),rep("GSA9_PGP_VL0012",length(year)),rep("GSA9_PGP_VL1218",length(year))))
+(variable_name<-rep("fuelcosts",length(Fleet_segment)))
+VL0612value<-1
+VL0012PGPvalue<-2
+VL1218PGPvalue<-3
+(value<-c(rep(VL0612value,length(year)),rep(VL0012PGPvalue,length(year)) ,rep(VL1218PGPvalue,length(year)) )) # if the costs change by year add those manually
+(fishing_tech<-c(rep(FT1,length(year)),rep(FT2,length(year)) ,rep(FT2,length(year))))
+(vessel_length<-c(rep("VL0612",length(year)),rep("VL0012",length(year)) ,rep("VL1218",length(year)) )) 
+(years<-rep(year,3))
+
+(DF_fuel<-data.frame(Fleet_segment,fishing_tech,vessel_length,years,variable_name,value))
+
+# 2 labour_costs
+
+(variable_name<-rep("labourcosts",length(Fleet_segment)))
+VL0612value<-1
+VL0012PGPvalue<-2
+VL1218PGPvalue<-3
+(value<-c(rep(VL0612value,length(year)),rep(VL0012PGPvalue,length(year)),rep(VL1218PGPvalue,length(year)))) # if the costs change by year add those manually
+(fishing_tech<-c(rep(FT1,length(year)),rep(FT2,length(year)),rep(FT2,length(year))    ))
+(vessel_length<-c(rep("VL0612",length(year)),rep("VL0012",length(year)),rep("VL1218",length(year)) ) )
+(DF_labour_costs<-data.frame(Fleet_segment,fishing_tech,vessel_length,years,variable_name,value))
+
+# 3 other_variable costs
+
+(variable_name<-rep("othervariablecosts",length(Fleet_segment)))
+VL0612value<-1
+VL0012PGPvalue<-2
+VL1218PGPvalue<-3
+(value<-c(rep(VL0612value,length(year)),rep(VL0012PGPvalue,length(year)), rep(VL1218PGPvalue,length(year)))) # if the costs change by year add those manually
+
+(fishing_tech<-c(rep(FT1,length(year)),rep(FT2,length(year)) ,rep(FT2,length(year)) ))
+(vessel_length<-c(rep("VL0612",length(year)),rep("VL0012",length(year)) ,rep("VL1218",length(year)) ))
+(DF_other_costs<-data.frame(Fleet_segment,fishing_tech,vessel_length,years,variable_name,value))
+
+(FINAL_NEW_DF_NO_DUP<-rbind(DF_fuel,DF_labour_costs,DF_other_costs))
+FINAL_NEW_DF_NO_DUP$gear<-NA
+FINAL_NEW_DF_NO_DUP$Metier<-NA
+(FINAL_NEW_DF_NO_DUP<-FINAL_NEW_DF_NO_DUP[,c(1,3,4,5,6,7,8)])
+
+# the following line are used for organizing the Fleet segments name + Metier lable 
+#-----------------
+(AAA<-separate(Costs_disag_total, col=Fleet_segmentBIG, into=c("A","B","C","D"), sep="_"))
+(BBB<-separate(AAA, col=Metier, into=c("E","FF","G","H","I"), sep="_"))
+BBB$FF[BBB$FF=="DES"]<-"DEF"
+(BBB<-BBB[,c(1,2,3,4,5,6,7,9:14)])
+(CCC<-BBB%>%unite("FS",c(A:FF), remove = F))
+(CCC<-CCC[,c(1,2,3,4,8:14)])
+(DDD<-CCC%>%unite("Metier",c(D:I), remove = T))
+colnames(DDD)[4]<-"Fleet_segment"
+
+colnames(FINAL_NEW_DF_NO_DUP)[3]<-"year"
+(BIG_FINAL_UNITED<-rbind(DDD,FINAL_NEW_DF_NO_DUP))
+(BIG_FINAL_UNITED<-BIG_FINAL_UNITED%>%arrange(year,Fleet_segment))
+#-------------------
+
+
+# the following lines are for the totalvariablecosts = fuelcosts + othervariablecost
+
+(totalvariablecosts<-BIG_FINAL_UNITED%>%filter(variable_name%in%c("fuelcosts","othervariablecosts")))
+(totalvariablecosts<-totalvariablecosts%>%
+    group_by(gear,Fleet_segment,year,vessel_length,Metier)%>%
+    summarise(value=sum(value)))
+(totalvariablecosts$variable_name<-"totalvariablecosts")
+
+
+# the following lines are for the revenues.discards.S1 normally = 0 
+(year<-(2008:2020))
+(Fleet_segment_uni<-unique(BIG_FINAL_UNITED$Fleet_segment))
+(Fleet_segment<-rep(Fleet_segment_uni,length(year)))
+(year<-rep(year,length(Fleet_segment_uni)))
+(variable_name<-rep("revenues.discards.S1",length(year)))
+(value<-rep(0,length(year)))
+(revenues.discards.S1<-data.frame(Fleet_segment,year,variable_name,value))
+
+
+# the following lines are for the commercialcosts normally = 0 
+(year<-(2008:2020))
+(Fleet_segment_uni<-unique(BIG_FINAL_UNITED$Fleet_segment))
+(Fleet_segment<-rep(Fleet_segment_uni,length(year)))
+(year<-rep(year,length(Fleet_segment_uni)))
+(variable_name<-rep("commercialcosts",length(year)))
+(value<-rep(0,length(year)))
+(commercialcosts<-data.frame(Fleet_segment,year,variable_name,value))
+
+
+# the following lines are for the essentialcosts normally = 0 
+(year<-(2008:2020))
+(Fleet_segment_uni<-unique(BIG_FINAL_UNITED$Fleet_segment))
+(Fleet_segment<-rep(Fleet_segment_uni,length(year)))
+(year<-rep(year,length(Fleet_segment_uni)))
+(variable_name<-rep("essentialcosts",length(year)))
+(value<-rep(0,length(year)))
+(essentialcosts<-data.frame(Fleet_segment,year,variable_name,value))
+
+# the following lines are for the avoidablemaintenancecosts normally = 0 
+(year<-(2008:2020))
+(Fleet_segment_uni<-unique(BIG_FINAL_UNITED$Fleet_segment))
+(Fleet_segment<-rep(Fleet_segment_uni,length(year)))
+(year<-rep(year,length(Fleet_segment_uni)))
+(variable_name<-rep("avoidablemaintenancecosts",length(year)))
+(value<-rep(0,length(year)))
+(avoidablemaintenancecosts<-data.frame(Fleet_segment,year,variable_name,value))
+
+
+# the following lines are for the unavoidablemaintenancecosts normally = 0 
+(year<-(2008:2020))
+(Fleet_segment_uni<-unique(BIG_FINAL_UNITED$Fleet_segment))
+(Fleet_segment<-rep(Fleet_segment_uni,length(year)))
+(year<-rep(year,length(Fleet_segment_uni)))
+(variable_name<-rep("unavoidablemaintenancecosts",length(year)))
+(value<-rep(0,length(year)))
+(unavoidablemaintenancecosts<-data.frame(Fleet_segment,year,variable_name,value))
+
+
+# the following lines are for the otherincome normally = 0 
+(year<-(2008:2020))
+(Fleet_segment_uni<-unique(BIG_FINAL_UNITED$Fleet_segment))
+(Fleet_segment<-rep(Fleet_segment_uni,length(year)))
+(year<-rep(year,length(Fleet_segment_uni)))
+(variable_name<-rep("otherincome",length(year)))
+(value<-rep(0,length(year)))
+(otherincome<-data.frame(Fleet_segment,year,variable_name,value))
+(bigDF_of_0<-rbind(unavoidablemaintenancecosts,avoidablemaintenancecosts,essentialcosts,commercialcosts,revenues.discards.S1,otherincome))
+
+library(tidyverse)
+library(data.table)
+library(readxl)
+# The following lines are for the mantainance costs; otherfixedcosts; depreciationcosts; opportunitycosts; employment and capitalvalue extraction
+
+dir<-"D:/Andrea/Desktop/NEW_BEMTool/MapFS_2008_2018_Italy.xlsx" #this for data from 2008 to 2018
+
+(data_2008<-read_xlsx(dir, sheet = 2)) 
+(data_2009<-read_xlsx(dir, sheet = 3)) 
+(data_2010<-read_xlsx(dir, sheet = 4)) 
+(data_2011<-read_xlsx(dir, sheet = 5)) 
+(data_2012<-read_xlsx(dir, sheet = 6)) 
+(data_2013<-read_xlsx(dir, sheet = 7)) 
+(data_2014<-read_xlsx(dir, sheet = 8))
+(data_2015<-read_xlsx(dir, sheet = 9)) 
+(data_2016<-read_xlsx(dir, sheet = 10)) 
+(data_2017<-read_xlsx(dir, sheet = 11)) 
+(data_2018<-read_xlsx(dir, sheet = 12)) 
+
+(data_big<-rbind(data_2008,data_2009,data_2010,data_2011,data_2012,data_2013,data_2014,data_2015,data_2016,data_2017,data_2018))
+
+###############################################################################
+# GLOSSARY 
+##############################################################################
+# [Type of costs]	     [AER label]
+#
+# depreciation costs	totdepcost X
+# other fixed costs	  totnovarcost X
+# maintenance costs	  totrepcost X
+# capital value	      totdeprep X
+# opportunity costs	  capital value*(1+interest rate)/(1+inflation rate) -1
+# employement	        totjob 
+# other income	      tototherinc
+# fuel costs	        totenercost
+###############################################################################
+
+
+# With the following line we will extract the "depreciationcosts" ad split it by Metier. All the value is assigned to DEF, DWS and MDD will be = 0.
+#---------------------------18)-depreciationcosts------------------------------------
+
+#DTS
+(depreciationcostDTS_NNDUP<-data_big%>%filter(ACRONYM=="totdepcost" & GSA=="9" & FISHING_TECH==FT1 & VESSEL_LENGTH=="VL0612"))
+(depreciationcostDTS_NNDUP$metier<-"DEF")
+(depreciationcostDTS_DUP<-data_big%>%filter(ACRONYM=="totdepcost" & GSA=="9" & FISHING_TECH==FT1 & VESSEL_LENGTH%in%c("VL1218","VL1824","VL2440")))
+
+(depreciationcostDTS_DUP_DEF<-depreciationcostDTS_DUP)
+(depreciationcostDTS_DUP_DEF$metier<-"DEF")
+
+(depreciationcostDTS_DUP_DWS<-depreciationcostDTS_DUP)
+(depreciationcostDTS_DUP_DWS$VALUE<-0)
+(depreciationcostDTS_DUP_DWS$metier<-"DWS")
+
+(depreciationcostDTS_DUP_MDD<-depreciationcostDTS_DUP)
+(depreciationcostDTS_DUP_MDD$VALUE<-0)
+(depreciationcostDTS_DUP_MDD$metier<-"MDD")
+
+(depreciationcostDTS<-rbind(depreciationcostDTS_NNDUP,depreciationcostDTS_DUP_DEF,depreciationcostDTS_DUP_DWS,depreciationcostDTS_DUP_MDD))
+
+depreciationcostDTS$GSA<-GSA
+depreciationcostDTS$OTB<-"OTB"
+(depreciationcostDTS<-depreciationcostDTS[,c(5,7,8,10,9,4,1,2,3,6)])
+(depreciationcostDTS<-unite(depreciationcostDTS,col="FS",c(GSA:metier), remove = T))
+
+
+#PGP
+(depreciationcostPGP_NNDUP1<-data_big%>%filter(ACRONYM=="totdepcost" & GSA=="9" & FISHING_TECH==FT2 & VESSEL_LENGTH%in%LOA2))
+(depreciationcostPGP_NNDUP1<-depreciationcostPGP_NNDUP1%>%
+    group_by(ACRONYM,UNIT,YEAR,GSA,SUPRA_REGION,FISHING_TECH)%>%
+    summarise(VALUE=sum(VALUE)))
+
+(depreciationcostPGP_NNDUP1$VESSEL_LENGTH<-"VL0012")
+(depreciationcostPGP_NNDUP2<-data_big%>%filter(ACRONYM=="totdepcost" & GSA=="9" & FISHING_TECH==FT2 & VESSEL_LENGTH=="VL1218"))
+(depreciationcostPGP_NNDUP<-rbind(depreciationcostPGP_NNDUP1,depreciationcostPGP_NNDUP2))
+(depreciationcostPGP_NNDUP<-depreciationcostPGP_NNDUP[,c(4,6,8,3,1,2,5,7)])
+depreciationcostPGP_NNDUP$GSA<-GSA
+(depreciationcostPGP_NNDUP<-unite(depreciationcostPGP_NNDUP, col="FS",c(GSA:VESSEL_LENGTH), remove = T))
+
+
+(depreciationcost<-rbind(depreciationcostDTS,depreciationcostPGP_NNDUP))
+(depreciationcost<-depreciationcost%>%arrange(YEAR,FS))
+
+# please check if something is missing. In this case for examples the VL2440 in 2008 is missing and we duplicate the 2009 values
+(depreciationcostX<-
+    depreciationcost%>%
+    filter(YEAR==2009 & FS%in%c("GSA9_DTS_VL2440_OTB_DEF","GSA9_DTS_VL2440_OTB_DWS","GSA9_DTS_VL2440_OTB_MDD")))
+depreciationcostX$YEAR<-2008
+(depreciationcost<-rbind(depreciationcostX,depreciationcost))
+depreciationcost$ACRONYM<-"depreciationcosts"
+
+
+
+# With the following line we will extract the "other fixed costs" ad split it by Metier. All the value is assigned to DEF, DWS and MDD will be = 0.
+#---------------------------------------------------19)-other fixed costs-------------------------------------
+#DTS
+(other_fixed_costsDTS_NNDUP<-data_big%>%filter(ACRONYM=="totnovarcost" & GSA=="9" & FISHING_TECH==FT1 & VESSEL_LENGTH=="VL0612"))
+(other_fixed_costsDTS_NNDUP$metier<-"DEF")
+(other_fixed_costsDTS_DUP<-data_big%>%filter(ACRONYM=="totnovarcost" & GSA=="9" & FISHING_TECH==FT1 & VESSEL_LENGTH%in%c("VL1218","VL1824","VL2440")))
+
+(other_fixed_costsDTS_DUP_DEF<-other_fixed_costsDTS_DUP)
+(other_fixed_costsDTS_DUP_DEF$metier<-"DEF")
+
+(other_fixed_costsDTS_DUP_DWS<-other_fixed_costsDTS_DUP)
+(other_fixed_costsDTS_DUP_DWS$VALUE<-0)
+(other_fixed_costsDTS_DUP_DWS$metier<-"DWS")
+
+(other_fixed_costsDTS_DUP_MDD<-other_fixed_costsDTS_DUP)
+(other_fixed_costsDTS_DUP_MDD$VALUE<-0)
+(other_fixed_costsDTS_DUP_MDD$metier<-"MDD")
+
+(other_fixed_costsDTS<-rbind(other_fixed_costsDTS_NNDUP,other_fixed_costsDTS_DUP_DEF,other_fixed_costsDTS_DUP_DWS,other_fixed_costsDTS_DUP_MDD))
+
+other_fixed_costsDTS$GSA<-GSA
+other_fixed_costsDTS$OTB<-"OTB"
+(other_fixed_costsDTS<-other_fixed_costsDTS[,c(5,7,8,10,9,4,1,2,3,6)])
+(other_fixed_costsDTS<-unite(other_fixed_costsDTS,col="FS",c(GSA:metier), remove = T))
+
+
+#PGP
+(other_fixed_costsPGP_NNDUP1<-data_big%>%filter(ACRONYM=="totnovarcost" & GSA=="9" & FISHING_TECH==FT2 & VESSEL_LENGTH%in%LOA2))
+(other_fixed_costsPGP_NNDUP1<-other_fixed_costsPGP_NNDUP1%>%
+    group_by(ACRONYM,UNIT,YEAR,GSA,SUPRA_REGION,FISHING_TECH)%>%
+    summarise(VALUE=sum(VALUE)))
+
+(other_fixed_costsPGP_NNDUP1$VESSEL_LENGTH<-"VL0012")
+(other_fixed_costsPGP_NNDUP2<-data_big%>%filter(ACRONYM=="totnovarcost" & GSA=="9" & FISHING_TECH==FT2 & VESSEL_LENGTH=="VL1218"))
+(other_fixed_costsPGP_NNDUP<-rbind(other_fixed_costsPGP_NNDUP1,other_fixed_costsPGP_NNDUP2))
+(other_fixed_costsPGP_NNDUP<-other_fixed_costsPGP_NNDUP[,c(4,6,8,3,1,2,5,7)])
+other_fixed_costsPGP_NNDUP$GSA<-GSA
+(other_fixed_costsPGP_NNDUP<-unite(other_fixed_costsPGP_NNDUP, col="FS",c(GSA:VESSEL_LENGTH), remove = T))
+
+
+(other_fixed_costs<-rbind(other_fixed_costsDTS,other_fixed_costsPGP_NNDUP))
+(other_fixed_costs<-other_fixed_costs%>%arrange(YEAR,FS))
+
+# please check if something is missing. In this case for examples the VL2440 in 2008 is missing and we duplicate the 2009 values
+(other_fixed_costsX<-
+    other_fixed_costs%>%
+    filter(YEAR==2009 & FS%in%c("GSA9_DTS_VL2440_OTB_DEF","GSA9_DTS_VL2440_OTB_DWS","GSA9_DTS_VL2440_OTB_MDD")))
+other_fixed_costsX$YEAR<-2008
+(other_fixed_costs<-rbind(other_fixed_costsX,other_fixed_costs))
+(other_fixed_costs<-other_fixed_costs%>%arrange(YEAR,FS))
+other_fixed_costs$ACRONYM<-"otherfixedcosts"
+
+
+# With the following line we will extract the "maintenance costs" ad split it by Metier. All the value is assigned to DEF, DWS and MDD will be = 0.
+#-------------------------------------------------20)-maintenance costs------------------------------------
+#DTS
+
+(maintenance_costsDTS_NNDUP<-data_big%>%filter(ACRONYM=="totrepcost" & GSA=="9" & FISHING_TECH==FT1 & VESSEL_LENGTH=="VL0612"))
+(maintenance_costsDTS_NNDUP$metier<-"DEF")
+(maintenance_costsDTS_DUP<-data_big%>%filter(ACRONYM=="totrepcost" & GSA=="9" & FISHING_TECH==FT1 & VESSEL_LENGTH%in%c("VL1218","VL1824","VL2440")))
+
+(maintenance_costsDTS_DUP_DEF<-maintenance_costsDTS_DUP)
+(maintenance_costsDTS_DUP_DEF$metier<-"DEF")
+
+(maintenance_costsDTS_DUP_DWS<-maintenance_costsDTS_DUP)
+(maintenance_costsDTS_DUP_DWS$VALUE<-0)
+(maintenance_costsDTS_DUP_DWS$metier<-"DWS")
+
+(maintenance_costsDTS_DUP_MDD<-maintenance_costsDTS_DUP)
+(maintenance_costsDTS_DUP_MDD$VALUE<-0)
+(maintenance_costsDTS_DUP_MDD$metier<-"MDD")
+
+(maintenance_costsDTS<-rbind(maintenance_costsDTS_NNDUP,maintenance_costsDTS_DUP_DEF,maintenance_costsDTS_DUP_DWS,maintenance_costsDTS_DUP_MDD))
+
+maintenance_costsDTS$GSA<-GSA
+maintenance_costsDTS$OTB<-"OTB"
+(maintenance_costsDTS<-maintenance_costsDTS[,c(5,7,8,10,9,4,1,2,3,6)])
+(maintenance_costsDTS<-unite(maintenance_costsDTS,col="FS",c(GSA:metier), remove = T))
+
+
+#PGP
+(maintenance_costsPGP_NNDUP1<-data_big%>%filter(ACRONYM=="totrepcost" & GSA=="9" & FISHING_TECH==FT2 & VESSEL_LENGTH%in%LOA2))
+(maintenance_costsPGP_NNDUP1<-maintenance_costsPGP_NNDUP1%>%
+    group_by(ACRONYM,UNIT,YEAR,GSA,SUPRA_REGION,FISHING_TECH)%>%
+    summarise(VALUE=sum(VALUE)))
+
+(maintenance_costsPGP_NNDUP1$VESSEL_LENGTH<-"VL0012")
+(maintenance_costsPGP_NNDUP2<-data_big%>%filter(ACRONYM=="totrepcost" & GSA=="9" & FISHING_TECH==FT2 & VESSEL_LENGTH=="VL1218"))
+(maintenance_costsPGP_NNDUP<-rbind(maintenance_costsPGP_NNDUP1,maintenance_costsPGP_NNDUP2))
+(maintenance_costsPGP_NNDUP<-maintenance_costsPGP_NNDUP[,c(4,6,8,3,1,2,5,7)])
+maintenance_costsPGP_NNDUP$GSA<-GSA
+(maintenance_costsPGP_NNDUP<-unite(maintenance_costsPGP_NNDUP, col="FS",c(GSA:VESSEL_LENGTH), remove = T))
+
+
+(maintenance_costs<-rbind(maintenance_costsDTS,maintenance_costsPGP_NNDUP))
+(maintenance_costs<-maintenance_costs%>%arrange(YEAR,FS))
+
+# please check if something is missing. In this case for examples the VL2440 in 2008 is missing and we duplicate the 2009 values
+(maintenance_costsX<-
+    maintenance_costs%>%
+    filter(YEAR==2009 & FS%in%c("GSA9_DTS_VL2440_OTB_DEF","GSA9_DTS_VL2440_OTB_DWS","GSA9_DTS_VL2440_OTB_MDD")))
+maintenance_costsX$YEAR<-2008
+(maintenance_costs<-rbind(maintenance_costsX,maintenance_costs))
+(maintenance_costs<-maintenance_costs%>%arrange(YEAR,FS))
+maintenance_costs$ACRONYM<-"maintenancecosts"
+
+# With the following line we will extract the "Capital value" ad split it by Metier. All the value is assigned to DEF, DWS and MDD will be = 0.
+#------------------------------------------21)-Capital value------------------------------------------
+
+#DTS
+
+(Capital_valueDTS_NNDUP<-data_big%>%filter(ACRONYM=="totdeprep" & GSA=="9" & FISHING_TECH==FT1 & VESSEL_LENGTH=="VL0612"))
+(Capital_valueDTS_NNDUP$metier<-"DEF")
+(Capital_valueDTS_DUP<-data_big%>%filter(ACRONYM=="totdeprep" & GSA=="9" & FISHING_TECH==FT1 & VESSEL_LENGTH%in%c("VL1218","VL1824","VL2440")))
+
+(Capital_valueDTS_DUP_DEF<-Capital_valueDTS_DUP)
+(Capital_valueDTS_DUP_DEF$metier<-"DEF")
+
+(Capital_valueDTS_DUP_DWS<-Capital_valueDTS_DUP)
+(Capital_valueDTS_DUP_DWS$VALUE<-0)
+(Capital_valueDTS_DUP_DWS$metier<-"DWS")
+
+(Capital_valueDTS_DUP_MDD<-Capital_valueDTS_DUP)
+(Capital_valueDTS_DUP_MDD$VALUE<-0)
+(Capital_valueDTS_DUP_MDD$metier<-"MDD")
+
+(Capital_valueDTS<-rbind(Capital_valueDTS_NNDUP,Capital_valueDTS_DUP_DEF,Capital_valueDTS_DUP_DWS,Capital_valueDTS_DUP_MDD))
+
+Capital_valueDTS$GSA<-GSA
+Capital_valueDTS$OTB<-"OTB"
+(Capital_valueDTS<-Capital_valueDTS[,c(5,7,8,10,9,4,1,2,3,6)])
+(Capital_valueDTS<-unite(Capital_valueDTS,col="FS",c(GSA:metier), remove = T))
+
+
+#PGP
+(Capital_valuePGP_NNDUP1<-data_big%>%filter(ACRONYM=="totdeprep" & GSA=="9" & FISHING_TECH==FT2 & VESSEL_LENGTH%in%LOA2))
+(Capital_valuePGP_NNDUP1<-Capital_valuePGP_NNDUP1%>%
+    group_by(ACRONYM,UNIT,YEAR,GSA,SUPRA_REGION,FISHING_TECH)%>%
+    summarise(VALUE=sum(VALUE)))
+
+(Capital_valuePGP_NNDUP1$VESSEL_LENGTH<-"VL0012")
+(Capital_valuePGP_NNDUP2<-data_big%>%filter(ACRONYM=="totdeprep" & GSA=="9" & FISHING_TECH==FT2 & VESSEL_LENGTH=="VL1218"))
+(Capital_valuePGP_NNDUP<-rbind(Capital_valuePGP_NNDUP1,Capital_valuePGP_NNDUP2))
+(Capital_valuePGP_NNDUP<-Capital_valuePGP_NNDUP[,c(4,6,8,3,1,2,5,7)])
+Capital_valuePGP_NNDUP$GSA<-GSA
+(Capital_valuePGP_NNDUP<-unite(Capital_valuePGP_NNDUP, col="FS",c(GSA:VESSEL_LENGTH), remove = T))
+
+
+(Capital_value<-rbind(Capital_valueDTS,Capital_valuePGP_NNDUP))
+(Capital_value<-Capital_value%>%arrange(YEAR,FS))
+
+# please check if something is missing. In this case for examples the VL2440 in 2008 is missing and we duplicate the 2009 values
+(Capital_valueX<-Capital_value%>%
+    filter(YEAR==2009 & FS%in%c("GSA9_DTS_VL2440_OTB_DEF","GSA9_DTS_VL2440_OTB_DWS","GSA9_DTS_VL2440_OTB_MDD")))
+Capital_valueX$YEAR<-2008
+(Capital_value<-rbind(Capital_valueX,Capital_value))
+(Capital_value<-Capital_value%>%arrange(YEAR,FS))
+Capital_value$ACRONYM<-"capitalvalue"
+
+# With the following line we will extract the "opportunity costs == capital value*(1+interest rate)/(1+inflation rate) -1" ad split it by Metier. All the value is assigned to DEF, DWS and MDD will be = 0.
+#--------------------------------------------22)-opportunity costs------------------------------------
+
+#DTS
+
+###############################################################################################
+# please insert below the inflation and interest rate of the country you are dealing with. 
+
+#-------------- I T A L Y --------------
+
+#interest rate ITA 2008- 2020 FROM https://data.worldbank.org/indicator/FR.INR.RINR?locations=IT
+intr<-c(4.33,	 3.03,	3.58,	2.94,	3.62,	3.95,	3.92,	3.17,	2.34,	2.26,	1.59)/100  #,	1.67,	1.15 = ( 2019, 2020)
+intr = as.data.frame(intr)
+intr$year = c(2008:2018)
+
+# inflation rate ITA 2008-2021 FROM https://data.worldbank.org/indicator/FP.CPI.TOTL.ZG?locations=IT
+
+inflr<-c(3.35,	0.77,	1.53,	2.78,	3.04,	1.22,	0.24,	0.04,	-0.09,	1.23,	1.14)/100 #,	0.61,	-0.14,	1.87 = ( 2019, 2020, 2021)
+inflr = as.data.frame(inflr)
+inflr$year = c(2008:2018)
+# ------------------------------------
+#########################################################
+
+DF<-data.frame( 
+  FS=Capital_value$FS,
+  YEAR=Capital_value$YEAR,
+  ACRONYM=Capital_value$ACRONYM,
+  VALUE=integer(length(Capital_value)),
+  UNIT=Capital_value$UNIT,
+  SUPRA_REGION=Capital_value$SUPRA_REGION,
+  stringsAsFactors = FALSE)
+
+a=1 
+for (a in 1:nrow(DF)){
+  DF$VALUE[a]<- Capital_value$VALUE[a]*(1+intr[intr$year==DF[a,"YEAR"],"year"])/(1+inflr[inflr$year==DF[a,"YEAR"],"year"]) - 1
+  
+}
+DF$ACRONYM<-"opportunity_costs"
+
+opportunity_costs<-DF
+opportunity_costs$ACRONYM<-"opportunitycosts"
+
+# With the following line we will extract the "employement" ad split it by Metier. All the value is assigned to DEF, DWS and MDD will be = 0.
+#--------------------------------------------------23) employement----------------
+
+#DTS
+
+(employementDTS_NNDUP<-data_big%>%filter(ACRONYM=="totjob" & GSA=="9" & FISHING_TECH==FT1 & VESSEL_LENGTH=="VL0612"))
+(employementDTS_NNDUP$metier<-"DEF")
+(employementDTS_DUP<-data_big%>%filter(ACRONYM=="totjob" & GSA=="9" & FISHING_TECH==FT1 & VESSEL_LENGTH%in%c("VL1218","VL1824","VL2440")))
+
+(employementDTS_DUP_DEF<-employementDTS_DUP)
+(employementDTS_DUP_DEF$metier<-"DEF")
+
+(employementDTS_DUP_DWS<-employementDTS_DUP)
+(employementDTS_DUP_DWS$VALUE<-0)
+(employementDTS_DUP_DWS$metier<-"DWS")
+
+(employementDTS_DUP_MDD<-employementDTS_DUP)
+(employementDTS_DUP_MDD$VALUE<-0)
+(employementDTS_DUP_MDD$metier<-"MDD")
+
+(employementDTS<-rbind(employementDTS_NNDUP,employementDTS_DUP_DEF,employementDTS_DUP_DWS,employementDTS_DUP_MDD))
+
+employementDTS$GSA<-GSA
+employementDTS$OTB<-"OTB"
+(employementDTS<-employementDTS[,c(5,7,8,10,9,4,1,2,3,6)])
+(employementDTS<-unite(employementDTS,col="FS",c(GSA:metier), remove = T))
+
+
+#PGP
+(employementPGP_NNDUP1<-data_big%>%filter(ACRONYM=="totjob" & GSA=="9" & FISHING_TECH==FT2 & VESSEL_LENGTH%in%LOA2))
+(employementPGP_NNDUP1<-employementPGP_NNDUP1%>%
+    group_by(ACRONYM,UNIT,YEAR,GSA,SUPRA_REGION,FISHING_TECH)%>%
+    summarise(VALUE=sum(VALUE)))
+
+(employementPGP_NNDUP1$VESSEL_LENGTH<-"VL0012")
+(employementPGP_NNDUP2<-data_big%>%filter(ACRONYM=="totjob" & GSA=="9" & FISHING_TECH==FT2 & VESSEL_LENGTH=="VL1218"))
+(employementPGP_NNDUP<-rbind(employementPGP_NNDUP1,employementPGP_NNDUP2))
+(employementPGP_NNDUP<-employementPGP_NNDUP[,c(4,6,8,3,1,2,5,7)])
+employementPGP_NNDUP$GSA<-GSA
+(employementPGP_NNDUP<-unite(employementPGP_NNDUP, col="FS",c(GSA:VESSEL_LENGTH), remove = T))
+
+
+(employement<-rbind(employementDTS,employementPGP_NNDUP))
+(employement<-employement%>%arrange(YEAR,FS))
+
+# please check if something is missing. In this case for examples the VL2440 in 2008 is missing and we duplicate the 2009 values
+(employementX<-
+    employement%>%
+    filter(YEAR==2009 & FS%in%c("GSA9_DTS_VL2440_OTB_DEF","GSA9_DTS_VL2440_OTB_DWS","GSA9_DTS_VL2440_OTB_MDD")))
+employementX$YEAR<-2008
+(employement<-rbind(employementX,employement))
+(employement<-employement%>%arrange(YEAR,FS))
+employement$ACRONYM<-"employement"
+
+# With the following line we will extract the "total fixed costs" which are equal to otherfixedcosts 
+# ------------------------------------24)-total fixed costs--------------------------
+
+
+total_fixed_costs<-other_fixed_costs
+total_fixed_costs$ACRONYM<-"totalfixedcosts"
+
+# With the following line we will extract the "totalcapitalcosts"
+#---------------------------------------25)-totalcapitalcosts-----------------------------
+
+(total_capital_costs<-rbind(opportunity_costs,depreciationcost))
+(total_capital_costs<-total_capital_costs%>%group_by(FS,YEAR,UNIT,SUPRA_REGION)%>%
+    summarise(VALUE=sum(VALUE)))
+total_capital_costs$ACRONYM<-"totalcapitalcosts"
+
+
+#### Now you can add all the costs DFs(ALLDATAFD,LAND_TOTAL_DF_ALLSPEC,REV_TOTAL_DF_ALLSPEC,REV_TOTAL_DF_MUT,BIG_FINAL_UNITED,totalvariablecosts) in a single Big One 
+unique(ALLDATAFD$FS)
+unique(LAND_TOTAL_DF_ALLSPEC$FS)
+unique(REV_TOTAL_DF_ALLSPEC$FS)
+unique(REV_TOTAL_DF_MUT$FS)
+
+
+unique(BIG_FINAL_UNITED$Fleet_segment)
+colnames(BIG_FINAL_UNITED)[4]<-"FS"
+unique(totalvariablecosts$Fleet_segment)
+colnames(totalvariablecosts)[2]<-"FS"
+
+(DF6costs<-bigDF_of_0)
+colnames(DF6costs)[1]<-"FS"
+#unique(DF6costs$Fleet_segment)
+
+#
+(DF8costs<-rbind(depreciationcost, other_fixed_costs, maintenance_costs, Capital_value, opportunity_costs,employement,total_fixed_costs,total_capital_costs))
+
+unique(DF8costs$FS)
+
+DF8costs<-DF8costs[,c(1:4)]
+colnames(DF8costs)[2]<-"year"
+colnames(DF8costs)[3]<-"variable_name"
+colnames(DF8costs)[4]<-"value"
+
+COST1<-rbind(DF6costs,DF8costs) # THE BIG ONE 
+
+(totalvariablecosts2<-totalvariablecosts[,c(2,3,6,7)])
+COST1<-rbind(COST1,totalvariablecosts2)
+(BIG_FINAL_UNITED2<-BIG_FINAL_UNITED[,c(4,3,6,7)])
+COST2<-rbind(COST1,BIG_FINAL_UNITED2)
+REV_TOTAL_DF_MUT$variable_name<-"totalrevenues_S1"
+colnames(REV_TOTAL_DF_MUT)[3]<-"value"
+COST3<-rbind(COST2,REV_TOTAL_DF_MUT)
+REV_TOTAL_DF_ALLSPEC$variable_name<-"totalrevenues"
+colnames(REV_TOTAL_DF_ALLSPEC)[3]<-"value"
+COST4<-rbind(COST3,REV_TOTAL_DF_ALLSPEC)
+colnames(LAND_TOTAL_DF_ALLSPEC)[3]<-"value"
+LAND_TOTAL_DF_ALLSPEC$variable_name<-"totallandings"
+COST5<-rbind(COST4,LAND_TOTAL_DF_ALLSPEC)
+ALLDATAFD$variable_name<-"maxseadays"
+COST6<-rbind(COST5,ALLDATAFD)
+
+
+(COST6<-COST6%>%
+    filter(FS!="GSA9_DTS_VL2440_OTB_DWS"))
+
+unique(COST6$variable_name) # should be 22
+unique(COST6$FS)
+
+rm(list=setdiff(ls(), "COST6"))
+COST6
+
+colnames(COST6)[3]<-"variable_code"
+
+(COST6A<-COST6%>%filter(variable_code%in%c("revenues.discards.S1","totalrevenues_S1")))
+COST6A$species<-SP
+(COST6B<-COST6%>%filter(!variable_code%in%c("revenues.discards.S1","totalrevenues_S1")))
+COST6B$species<-"ALL"
+(COST6<-rbind(COST6A,COST6B))
+(COST6<-COST6%>%arrange(year,FS))
+
+
+(Fleet_segments <- sort(unique(COST6$FS)))
+
+FS_ready <- Fleet_segments 
+
+ts<-c(2008:2020)
+
+trans_year=c(2020,2021)
+
+#data_frame <- COST6
+
+
+
+FirstColumn= c("casestudy.maxavgseadays",
+               "casestudy.totallandings", # DA FDI
+               "casestudy.revenues.S1",# DA FDI
+               "casestudy.totalrevenues",# DA FDI
+               "casestudy.revenues.discard.S1",
+               "casestudy.fuelcosts",
+               "casestudy.commercialcosts",
+               "casestudy.othervariablecosts",
+               "casestudy.totalvariablecosts",
+               "casestudy.maintenancecosts",
+               "casestudy.otherfixedcosts",
+               "casestudy.essentialcosts",
+               "casestudy.avoidablemaintenancecosts",
+               "casestudy.unavoidablemaintenancecosts",
+               "casestudy.totalfixedcosts",
+               "casestudy.labourcosts",
+               "casestudy.depreciationcosts",
+               "casestudy.opportunitycosts",
+               "casestudy.totalcapitalcosts",
+               "casestudy.otherincome",
+               "casestudy.employment",
+               "casestudy.capitalvalue")
+
+
+
+stks=c(SP)
+(nb_stk=length(stks))
+
+DFTOT<-list()
+rm(x)
+x=2
+for (x in 1:length(FS_ready)){
+  
+  {
+    
+    (DF0=as.data.frame(matrix(0,nrow=(20+2*nb_stk),ncol=length(ts))))
+    (colnames(DF0)=ts)
+    (data_frame1=COST6[COST6$FS==FS_ready[x],])
+    
+    ty=1
+    #------------------------------
+    #maxseadays
+    (data_frame=data_frame1[data_frame1$variable_code=="maxseadays",] )
+    
+    if (nrow(data_frame)>0){
+      (data_frame=data_frame[as.character(data_frame$value)!="NULL",])
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        ( year=data_frame$year[rr] )
+        ( DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        
+      }
+      
+    } else {
+      DF0[ty,]=0  
+    }
+    
+    ty=2
+    #------------------------------
+    #total landing
+    (data_frame=data_frame1[data_frame1$variable_code=="totallandings",] )
+    
+    if (nrow(data_frame)>0){
+      (data_frame=data_frame[as.character(data_frame$value)!="NULL",])
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    ##----------------------------
+    for (st in 1:nb_stk) {
+      ty=3 + (st-1) 
+      #revenues by stock
+      
+      (data_frame<-data_frame1%>%filter(variable_code=="totalrevenues_S1" & species==stks[st]))
+      
+      if (nrow(data_frame)>0){
+        data_frame=data_frame[as.character(data_frame$value)!="NULL",]
+        
+        # (FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+        
+        #(colnames(FDI_data_temp)=c("FS","year","value"))
+        
+        for (rr in 1:nrow(data_frame)){
+          
+          ( year=data_frame$year[rr] )
+          ( DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+          DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+        }
+        
+      } else {
+        DF0[ty,]=0  
+      }
+      
+    }
+    
+    #------------------------------
+    ty=3 + st
+    #total revenues by stock all species
+    (data_frame<-data_frame1%>%filter(variable_code=="totalrevenues" ))
+    
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    #------------------------------
+    ty=4 + st
+    # revenues.discards.S1 
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="revenues.discards.S1" & species==stks[st]))
+    
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    #----------------------------------------------------------
+    ty=5 + st
+    # fuelcosts
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="fuelcosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    
+    #------------------------------
+    ty=6 + st
+    # commercialcosts
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="commercialcosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    # --------------------------------------
+    ty=7 + st
+    # othervariablecosts
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="othervariablecosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    #------------------------------
+    
+    ty=8 + st
+    # totalvariablecosts
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="totalvariablecosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    #------------------------------
+    
+    ty=9 + st
+    # maintenancecosts
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="maintenancecosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    #------------------------------
+    
+    
+    ty=10 + st
+    # otherfixedcosts
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="otherfixedcosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    #------------------------------
+    
+    
+    ty=11 + st
+    # essentialcosts
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="essentialcosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    
+    #------------------------------
+    
+    ty=12 + st
+    # avoidablemaintenancecosts
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="avoidablemaintenancecosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    
+    #------------------------------
+    
+    
+    ty=13 + st
+    # unavoidablemaintenancecosts
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="unavoidablemaintenancecosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    #------------------------------
+    
+    
+    ty=14 + st
+    # totalfixedcosts 
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="totalfixedcosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    
+    
+    #------------------------------
+    
+    ty=15 + st
+    # labourcosts 
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="labourcosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    
+    #------------------------------
+    ty=16 + st
+    # depreciationcosts 
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="depreciationcosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    #------------------------------
+    
+    ty=17 + st
+    # opportunitycosts 
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="opportunitycosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    
+    #------------------------------
+    
+    ty=18 + st
+    # totalcapitalcosts 
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="totalcapitalcosts" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    #------------------------------
+    
+    ty=19 + st
+    # otherincome 
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="otherincome" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    #------------------------------
+    
+    ty=20 + st
+    # employment 
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="employment" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    #------------------------------
+    
+    ty=21 + st
+    # capitalvalue 
+    
+    (data_frame<-data_frame1%>%filter(variable_code=="capitalvalue" ))
+    
+    if (nrow(data_frame)>0){
+      
+      #( FDI_data_temp=aggregate(as.numeric(FDI_data_temp$totvallandg),by=list(FDI_data_temp$FS,FDI_data_temp$year),FUN="sum"))
+      
+      #colnames(FDI_data_temp)=c("FS","year","value")
+      
+      for (rr in 1:nrow(data_frame)){
+        
+        (year=data_frame$year[rr] )
+        (DF0[ty,colnames(DF0)==year]=data_frame$value[rr])
+        DF0[ty,]<-round(as.numeric(DF0[ty,],0))
+      }
+      
+    } else {
+      DF0[ty,]=0  
+      
+    }
+    DFTOT[[x]]<-DF0
+  }
+  
+}
+
+FINALDF<-do.call(cbind, DFTOT)
+(rownames(FINALDF)<-FirstColumn)
+
+
+(DFhead=as.data.frame(matrix(NA, nrow=4, ncol=length(FINALDF))))
+(colnames(DFhead)=colnames(FINALDF))
+(rownames(DFhead)<-c("Units: days","casestudy.fleetsegmentcode","casestudy.fishingtechnique","casestudy.loa"))
+DFhead[1,]<-colnames(FINALDF)
+DFhead[2,]<-rep(FS_ready,each=length(ts))
+
+(TIME_SERIES<-rbind(DFhead,FINALDF))
+
+
+(dir1="C:/INPUT")
+# Please, add your directory and save the file as .csv
+write.table(TIME_SERIES,paste(dir1,"/TS.csv",sep=""),sep=";",row.names=T, col.names = F) 
+
+```
