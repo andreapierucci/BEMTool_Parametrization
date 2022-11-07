@@ -1,15 +1,8 @@
 ---
-title: "9) BEMTool Days at sea"
+title: "Fishing Days"
 author: "Andrea Pierucci and Isabella Bitetto"
-date: '2022-03-25'
-output:
-  #bookdown::pdf_book:
-  pdf_document: default
-  #html_document: default
-header-includes:
-    - \usepackage{ragged2e}
-    - \usepackage{multirow}
-    - \usepackage{setspace}\doublespacing
+date: "2022-11-07"
+output: html_document
 ---
 
 ```{r}
@@ -19,62 +12,137 @@ library(readxl)
 library(tidyverse)
 library(tidyr)
 
-# You can use thi script as example for creating days files by month for BMT.
-# Also in this case you need the vessel file ready. 
+# STEP  1 #===================================================================
 
-(RECENTDATADAY<-read.csv("D:/Andrea/Desktop/NEW_BEMTool/FDI_effort_by_country.csv", sep = ";"))
+# Below an example of fishing days.csv file for BEMTool.
+# For this example we use Italian FDI official data Table G (EFFORT)
+# set your working directory 
 
-COUNTRY<-"Italy"
-GSA<-"GSA9"
-FT1<-"DTS"
+wd<-"D:/Andrea/Desktop/FISH Stock Assessment/STECF 2022/Effort regime/SET/DATA/FDI"
+(RECENTDATADAY<-read.csv(paste0(wd,"/tableG_EWG2211.csv"), sep = ","))
+
+COUNTRY<-"ITA"
+GSAs<-c("GSA9","GSA10") # selesct your gsas
+FT1<-c("DTS") 
 LOA1<-c("VL0612","VL1218","VL1824","VL2440")
+lastyear<-2021 # define the last available year of your data 
 
+# ===================================== DTS 
+(DATA_DAY_A<-RECENTDATADAY%>% 
+    select(country_code,year,quarter,vessel_length,fishing_tech,sub_region,totseadays)%>%
+    filter(country_code%in%COUNTRY & fishing_tech%in%FT1 & vessel_length%in%LOA1 & sub_region%in%GSAs)%>%
+    group_by(country_code,year,quarter,vessel_length,fishing_tech,sub_region)%>%
+    summarise(totseadays=sum(totseadays)))
 
-(GSA9_DAY_A<-RECENTDATADAY%>% 
-    select(country_name,year,Vessel_Length,Fishing_Technique,Sub_region,Total_days_at_sea)%>%
-    filter(country_name%in%COUNTRY &  Fishing_Technique%in%FT1 & Vessel_Length%in%LOA1 & Sub_region%in%GSA))
+# You need to check if you have all the segments in all GSAs and all years 
+(Vessel.Length.Category<-rep(rep(rep(unique(DATA_DAY_A$vessel_length),4),length(GSAs)),length(unique(DATA_DAY_A$year))))
+(quarters<-rep(rep(rep(c(1:4),each=length(unique(DATA_DAY_A$vessel_length))),length(unique(DATA_DAY_A$year))),length(GSAs)))
+(year<-rep(rep(unique(DATA_DAY_A$year),each=(length(unique(DATA_DAY_A$vessel_length))*4)),length(GSAs)))
+(principal.sub.region<-rep(GSAs,each=(length(Vessel.Length.Category)/length(GSAs))))
+(data_check<-data.frame(Vessel.Length.Category,quarters,year,principal.sub.region))
+(data_check$Country.name<-COUNTRY)
+(data_check$Fishing.Technique<-FT1)
+(data_check$totseadays<-0)
+
+# now you merge the two data frame and you have all fleet segments for all GSAs in all year. The missing fleet segment have been replaced with 0s.
+(DATA_DAY_A<-DATA_DAY_A[,c(1,2,3,6,5,4,7)]%>%unite("FS",country_code:vessel_length, remove = T, sep = "_"))
+(data_check<-data_check[,c(5,3,2,4,6,1,7)]%>%unite("FS",Country.name:Vessel.Length.Category, remove = T, sep = "_"))
+
+(DATA_DAY_A<-merge(DATA_DAY_A,data_check,  by.x ="FS", by.y="FS", all.x = F, all.y = T))
+(DATA_DAY_A[is.na(DATA_DAY_A)] = 0.00001)
+(DATA_DAY_A<-DATA_DAY_A[,c(1,2)])
+colnames(DATA_DAY_A)[2]<-"totseadays"
+
+# I need to add the gear for label consistency 
+DATA_DAY_A$gear<-"OTB"
+(DATA_DAY_A<-separate(DATA_DAY_A, col=FS, into=c("A","B","C","D","E","FF"), sep="_"))
+(DATA_DAY_A<-DATA_DAY_A[,c(1,2,3,4,5,6,8,7)]%>%unite("FS",D:gear, remove = T, sep = "_"))
+colnames(DATA_DAY_A)[1]<-"country_code"
+colnames(DATA_DAY_A)[2]<-"year"
+colnames(DATA_DAY_A)[3]<-"quarter"
+
+# At this time a need to aggregate pgp VL0006 with VL0612 as VL0012. This kind of aggregation are defined by the user.
+#==================================== PGP 
 
 # below some aggregation for some PGP LOA
 # this aggregation are totally arbitrary 
-COUNTRY<-"Italy"
-GSA<-"GSA9"
+
 FT2<-"PGP"
 LOA2<-c("VL0006","VL0612")
+LOA3<-c("VL1218")
 
+(DATA_DAY_B1<-RECENTDATADAY%>% 
+    select(country_code,year,quarter,vessel_length,fishing_tech,sub_region,totseadays)%>%
+    filter(country_code%in%COUNTRY & fishing_tech%in%FT2 & vessel_length%in%LOA2 & sub_region%in%GSAs)%>%
+    group_by(country_code,year,quarter,fishing_tech,sub_region)%>%
+    summarise(totseadays=sum(totseadays)))
 
-(GSA9_DAY_B1<-RECENTDATADAY%>%
-    select(country_name,year,Vessel_Length,Fishing_Technique,Sub_region,Total_days_at_sea)%>%
-    filter(country_name%in%COUNTRY &  Fishing_Technique%in%FT2 & Vessel_Length%in%LOA2 & Sub_region%in%GSA)%>%
-    group_by(country_name,year,Fishing_Technique,Sub_region)%>%
-    summarise(Total_days_at_sea=sum(as.numeric(Total_days_at_sea))))
-GSA9_DAY_B1$Vessel_Length<-"VL0012"
+DATA_DAY_B1$vessel_length<-"VL0012"
 
-(GSA9_DAY_B2<-RECENTDATADAY%>%
-    select(country_name,year,Vessel_Length,Fishing_Technique,Sub_region,Total_days_at_sea)%>%
-    filter(country_name%in%COUNTRY &  Fishing_Technique%in%FT2 & Vessel_Length%in%c("VL1218") & Sub_region%in%GSA))
+# You need to check if you have all the segments in all GSAs and all years 
 
-GSA9_DAY<-rbind(GSA9_DAY_A,GSA9_DAY_B1,GSA9_DAY_B2)
+(Vessel.Length.Category<-rep(rep(rep(unique(DATA_DAY_B1$vessel_length),4),length(GSAs)),length(unique(DATA_DAY_B1$year))))
+(quarters<-rep(rep(rep(c(1:4),each=length(unique(DATA_DAY_B1$vessel_length))),length(unique(DATA_DAY_B1$year))),length(GSAs)))
+(year<-rep(rep(unique(DATA_DAY_B1$year),each=(length(unique(DATA_DAY_B1$vessel_length))*4)),length(GSAs)))
+(principal.sub.region<-rep(GSAs,each=(length(Vessel.Length.Category)/length(GSAs))))
+(data_check<-data.frame(Vessel.Length.Category,quarters,year,principal.sub.region))
+(data_check$Country.name<-COUNTRY)
+(data_check$Fishing.Technique<-FT2)
+(data_check$totseadays<-0)
 
-GSA9_DAY$Month<-0
-GSA9_DAY$Unit<-"Days"
-GSA9_DAY$Source<-"FDI_capacity_by_country"
+# now you merge the two data frame and you have all fleet segments for all GSAs in all year. The missing fleet segment have been replaced with 0s.
+(DATA_DAY_B1<-DATA_DAY_B1[,c(1,2,3,5,4,7,6)]%>%unite("FS",country_code:vessel_length, remove = T, sep = "_"))
+(data_check<-data_check[,c(5,3,2,4,6,1,7)]%>%unite("FS",Country.name:Vessel.Length.Category, remove = T, sep = "_"))
+(DATA_DAY_B1<-merge(DATA_DAY_B1,data_check,  by.x ="FS", by.y="FS", all.x = F, all.y = T))
+(DATA_DAY_B1[is.na(DATA_DAY_B1)] = 0.00001)
+(DATA_DAY_B1<-DATA_DAY_B1[,c(1,2)])
+colnames(DATA_DAY_B1)[2]<-"totseadays"
 
-head(GSA9_DAY)
-(GSA9_DAY<-GSA9_DAY[,c(5,4,3,2,7,6,8,9)])
+(DATA_DAY_B2<-RECENTDATADAY%>%
+    select(country_code,year,quarter,vessel_length,sub_region,fishing_tech,totseadays)%>%
+    filter(country_code%in%COUNTRY & fishing_tech%in%FT2 & vessel_length%in%LOA3 & sub_region%in%GSAs)%>%
+    group_by(country_code,year,quarter,sub_region,fishing_tech,vessel_length)%>%
+    summarise(totseadays=sum(as.numeric(totseadays))))
 
-(GSA9_DAY<-GSA9_DAY%>%
-    arrange(year,Fishing_Technique,Vessel_Length)%>%
-    group_by(Sub_region,Fishing_Technique,Vessel_Length,year,Month,Unit,Source)%>%
-    summarise(Total_days_at_sea=sum(as.numeric(Total_days_at_sea))))
+# You need to check if you have all the segments in all GSAs and all years 
 
-(GSA9_DAY<-GSA9_DAY%>%arrange(year,Fishing_Technique,Vessel_Length))
+(Vessel.Length.Category<-rep(rep(rep(unique(DATA_DAY_B2$vessel_length),4),length(GSAs)),length(unique(DATA_DAY_B2$year))))
+(quarters<-rep(rep(rep(c(1:4),each=length(unique(DATA_DAY_B2$vessel_length))),length(unique(DATA_DAY_B2$year))),length(GSAs)))
+(year<-rep(rep(unique(DATA_DAY_B2$year),each=(length(unique(DATA_DAY_B2$vessel_length))*4)),length(GSAs)))
+(principal.sub.region<-rep(GSAs,each=(length(Vessel.Length.Category)/length(GSAs))))
+(data_check<-data.frame(Vessel.Length.Category,quarters,year,principal.sub.region))
+(data_check$Country.name<-COUNTRY)
+(data_check$Fishing.Technique<-FT2)
+(data_check$totseadays<-0)
+
+# now you merge the two data frame and you have all fleet segments for all GSAs in all year. The missing fleet segment have been replaced with 0s.
+(DATA_DAY_B2<-DATA_DAY_B2%>%unite("FS",country_code:vessel_length, remove = T, sep = "_"))
+(data_check<-data_check[,c(5,3,2,4,6,1,7)]%>%unite("FS",Country.name:Vessel.Length.Category, remove = T, sep = "_"))
+(DATA_DAY_B2<-merge(DATA_DAY_B2,data_check,  by.x ="FS", by.y="FS", all.x = F, all.y = T))
+(DATA_DAY_B2[is.na(DATA_DAY_B2)] = 0.00001)
+(DATA_DAY_B2<-DATA_DAY_B2[,c(1,2)])
+colnames(DATA_DAY_B2)[2]<-"totseadays"
+(DATA_DAY_B12<-rbind(DATA_DAY_B1,DATA_DAY_B2))
+(DATA_DAY_B12<-separate(DATA_DAY_B12, col=FS, into=c("A","B","C","D","E","FF"), sep="_"))
+(DATA_DAY_B12<-DATA_DAY_B12%>%unite("FS",D:FF, remove = T, sep = "_"))
+colnames(DATA_DAY_B12)[1]<-"country_code"
+colnames(DATA_DAY_B12)[2]<-"year"
+colnames(DATA_DAY_B12)[3]<-"quarter"
+(DATA_DAY<-rbind(DATA_DAY_A,DATA_DAY_B12))
+# now I need to split each quarter in 3 
+(DATA_DAY<-rbind(DATA_DAY,DATA_DAY,DATA_DAY))
+(DATA_DAY<-DATA_DAY%>%arrange(year,FS,quarter))
+(DATA_DAY$true_totseadays<-DATA_DAY$totseadays/3)
+(DATA_DAY$Month<-c(1:12))
+DATA_DAY$Unit<-"Days"
+DATA_DAY$Source<-"FDI_capacity_by_country"
+(DATA_DAY<-DATA_DAY[,c(1,2,4,7,6,8,9)])
+colnames(DATA_DAY)[5]<-"totseadays"
 
 #RECENT DATA some labels changes needed
-colnames(GSA9_DAY)[1]<-"GSA"
-colnames(GSA9_DAY)[2]<-"fishing_tech"
-colnames(GSA9_DAY)[3]<-"vessel_length"
-colnames(GSA9_DAY)[8]<-"value"
-colnames(GSA9_DAY)[6]<-"unit"
+#colnames(DATA_DAY)[3]<-"vessel_length"
+#colnames(DATA_DAY)[8]<-"value"
+#colnames(DATA_DAY)[6]<-"unit"
 
 # Test 2 #=================================================================================================
 # Here the extraction of the data from 2008 to 2013
@@ -82,90 +150,170 @@ colnames(GSA9_DAY)[6]<-"unit"
 dir<-"D:/Andrea/Desktop/NEW_BEMTool/2018-07_STECF_18-07-EU_Fleet_Effort_FAO_Gear_levels_final.xlsx"
 
 (OLD_DATA_DAYS<-read_xlsx(dir, sheet = 2))
+(OLD_DATA_DAYS<-separate(OLD_DATA_DAYS, col=sub_reg, into=c("A","B"), sep=" "))
+(OLD_DATA_DAYS$A[OLD_DATA_DAYS$A=="sa"]<-"GSA")
+(OLD_DATA_DAYS<-OLD_DATA_DAYS%>%unite("sub_reg",A:B, remove = T, sep = ""))
 
-# First I group all the GSAs 
+# DTS =============================
 
 CC<-"ITA"
+GSAs<-c("GSA9","GSA10")
+yearx<-2013 # indicate the last year of FDI available data at a GSAs level
 
 (OLD_DATA_DAYS_DTS<-OLD_DATA_DAYS%>%
     select(country_code,year,fishing_tech,variable_code,sub_reg,vessel_length,value,unit)%>%
-    filter(country_code%in%CC, variable_code%in%"totseadays" & fishing_tech%in%FT1  & vessel_length%in%LOA1 & sub_reg%in%"sa 9"))
+    filter(country_code%in%CC, year<yearx & variable_code%in%"totseadays" & fishing_tech%in%FT1  & vessel_length%in%LOA1 & sub_reg%in%GSAs))
+
+
+# I need to add a table check also here 
+
+(Vessel.Length.Category<-rep(rep(sort(unique(OLD_DATA_DAYS_DTS$vessel_length)),length(unique(OLD_DATA_DAYS_DTS$year))),length(GSAs)))
+(year<-rep(rep(sort(unique(OLD_DATA_DAYS_DTS$year)),each=(length(unique(OLD_DATA_DAYS_DTS$vessel_length)))),length(GSAs)))
+(principal.sub.region<-rep(GSAs,each=(length(Vessel.Length.Category)/length(GSAs))))
+(data_check<-data.frame(year,principal.sub.region,Vessel.Length.Category))
+(data_check$country_code<-CC)
+(data_check$fishing_tech<-FT1)
+(data_check$value<-0)
+
+# now you merge the two data frame and you have all fleet segments for all GSAs in all year. The missing fleet segment have been replaced with 0s.
+
+(OLD_DATA_DAYS_DTS<-OLD_DATA_DAYS_DTS[,c(1,2,5,3,6,7)]%>%unite("FS",country_code:vessel_length, remove = T, sep = "_"))
+(data_check<-data_check[,c(4,1,2,5,3,6)]%>%unite("FS",country_code:Vessel.Length.Category, remove = T, sep = "_"))
+(OLD_DATA_DAYS_DTS<-merge(OLD_DATA_DAYS_DTS,data_check,  by.x ="FS", by.y="FS", all.x = F, all.y = T))
+(OLD_DATA_DAYS_DTS[is.na(OLD_DATA_DAYS_DTS)] = 0.00001)
+(OLD_DATA_DAYS_DTS<-OLD_DATA_DAYS_DTS[,c(1,2)])
+colnames(OLD_DATA_DAYS_DTS)[2]<-"totseadays"
+
+
+# ==================================== PGP
 
 (OLD_DATA_DAYS_PGP_1<-OLD_DATA_DAYS%>%
     select(country_code,year,fishing_tech,variable_code,sub_reg,vessel_length,value,unit)%>%
-    filter(country_code%in%CC, variable_code%in%"totseadays" & fishing_tech%in%FT2 & vessel_length%in%LOA2 & sub_reg%in%"sa 9")%>%
+    filter(country_code%in%CC, year<yearx & variable_code%in%"totseadays" & fishing_tech%in%FT2 & vessel_length%in%LOA2 & sub_reg%in%GSAs)%>%
     group_by(country_code,year,fishing_tech,variable_code,sub_reg,unit)%>%
     summarise(value=sum(as.numeric(value))))
 
 OLD_DATA_DAYS_PGP_1$vessel_length<-"VL0012"
 
+
+# You need to check if you have all the segments in all GSAs and all years 
+
+(Vessel.Length.Category<-rep(rep(unique(OLD_DATA_DAYS_PGP_1$vessel_length),length(GSAs)),length(unique(OLD_DATA_DAYS_PGP_1$year))))
+(principal.sub.region<-rep(GSAs,each=(length(Vessel.Length.Category)/length(GSAs))))
+(year<-rep(rep(unique(OLD_DATA_DAYS_PGP_1$year),each=(length(unique(OLD_DATA_DAYS_PGP_1$vessel_length)))),length(GSAs)))
+  
+(data_check<-data.frame(year,Vessel.Length.Category,principal.sub.region))
+(data_check$Country.name<-COUNTRY)
+(data_check$Fishing.Technique<-FT2)
+(data_check$value<-0)
+
+# now you merge the two data frame and you have all fleet segments for all GSAs in all year. The missing fleet segment have been replaced with 0s.
+(OLD_DATA_DAYS_PGP_1<-OLD_DATA_DAYS_PGP_1[,c(1,2,5,3,8,7)]%>%unite("FS",country_code:vessel_length, remove = T, sep = "_"))
+(data_check<-data_check[,c(4,1,3,5,2,6)]%>%unite("FS",Country.name:Vessel.Length.Category, remove = T, sep = "_"))
+
+(OLD_DATA_DAYS_PGP_1<-merge(OLD_DATA_DAYS_PGP_1,data_check,  by.x ="FS", by.y="FS", all.x = F, all.y = T))
+(OLD_DATA_DAYS_PGP_1[is.na(OLD_DATA_DAYS_PGP_1)] = 0.00001)
+(OLD_DATA_DAYS_PGP_1<-OLD_DATA_DAYS_PGP_1[,c(1,2)])
+colnames(OLD_DATA_DAYS_PGP_1)[2]<-"totseadays"
+
 (OLD_DATA_DAYS_PGP_2<-OLD_DATA_DAYS%>%
     select(country_code,year,fishing_tech,variable_code,sub_reg,vessel_length,value,unit)%>%
-    filter(country_code%in%CC, variable_code%in%"totseadays" & fishing_tech%in%FT2 & vessel_length%in%"VL1218" & sub_reg%in%"sa 9"))
+    filter(country_code%in%CC & year<yearx & variable_code%in%"totseadays" & fishing_tech%in%FT2 & vessel_length%in%LOA3 & sub_reg%in%GSAs))
+
+# You need to check if you have all the segments in all GSAs and all years 
+
+(Vessel.Length.Category<-rep(rep(unique(OLD_DATA_DAYS_PGP_2$vessel_length),length(GSAs)),length(unique(OLD_DATA_DAYS_PGP_2$year))))
+(principal.sub.region<-rep(GSAs,each=(length(Vessel.Length.Category)/length(GSAs))))
+(year<-rep(rep(sort(unique(OLD_DATA_DAYS_PGP_2$year)),each=(length(unique(OLD_DATA_DAYS_PGP_2$vessel_length)))),length(GSAs)))
+  
+(data_check<-data.frame(year,Vessel.Length.Category,principal.sub.region))
+(data_check$Country.name<-COUNTRY)
+(data_check$Fishing.Technique<-FT2)
+(data_check$value<-0)
+
+# now you merge the two data frame and you have all fleet segments for all GSAs in all year. The missing fleet segment have been replaced with 0s.
+(OLD_DATA_DAYS_PGP_2<-OLD_DATA_DAYS_PGP_2[,c(1,2,5,3,6,7)]%>%unite("FS",country_code:vessel_length, remove = T, sep = "_"))
+(data_check<-data_check[,c(4,1,3,5,2,6)]%>%unite("FS",Country.name:Vessel.Length.Category, remove = T, sep = "_"))
+
+(OLD_DATA_DAYS_PGP_2<-merge(OLD_DATA_DAYS_PGP_2,data_check,  by.x ="FS", by.y="FS", all.x = F, all.y = T))
+(OLD_DATA_DAYS_PGP_2[is.na(OLD_DATA_DAYS_PGP_2)] = 0.00001)
+(OLD_DATA_DAYS_PGP_2<-OLD_DATA_DAYS_PGP_2[,c(1,2)])
+colnames(OLD_DATA_DAYS_PGP_2)[2]<-"totseadays"
+
 
 (OLD_DATA_DAYS<-rbind(OLD_DATA_DAYS_DTS,OLD_DATA_DAYS_PGP_1,OLD_DATA_DAYS_PGP_2))
-(OLD_DATA_DAYS<-OLD_DATA_DAYS%>%arrange(year,fishing_tech,vessel_length))
-OLD_DATA_DAYX<-OLD_DATA_DAYS[9,]
-OLD_DATA_DAYX$year[OLD_DATA_DAYX$year%in%"2009"]<-"2008"
-(OLD_DATA_DAYS<-rbind(OLD_DATA_DAYX,OLD_DATA_DAYS))
-(OLD_DATA_DAYS<-OLD_DATA_DAYS%>%arrange(year,fishing_tech,vessel_length))
 
-# This is the old data set I need.
+(OLD_DATA_DAYS<-separate(OLD_DATA_DAYS, col=FS, into=c("A","B","C","D","FF"), sep="_"))
 
-(OLD_DATA_3<-OLD_DATA_DAYS%>%filter(year%in%c("2008","2009","2010","2011","2012","2013")))
-
-# Please, check if something is missing.
-
-(OLD_DATA_3<-OLD_DATA_3%>%arrange(year,fishing_tech,vessel_length))
 
 # Some time you have some missing data in some specific years. 
 # NB all the csv INPUT file in BMT shall have the same time series length. 
 # In this example you need to create the absent 2006 and 2007 data equal to 2008. 
 
-(OLD_DATA_2006<-OLD_DATA_3%>%filter(year%in%"2008"))
-(OLD_DATA_2006[,2]<-c(rep("2006",6)))
+(OLD_DATA_DAYS_2006<-OLD_DATA_DAYS%>%filter(B%in%"2008"))
+(OLD_DATA_DAYS_2006$B<-"2006")
 
-(OLD_DATA_2007<-OLD_DATA_3%>%filter(year%in%"2008"))
-(OLD_DATA_2007[,2]<-c(rep("2007",6)))
+(OLD_DATA_DAYS_2007<-OLD_DATA_DAYS%>%filter(B%in%"2008"))
+(OLD_DATA_DAYS_2007$B<-"2007")
 
 # Now you may merge all the old data set
 
-(OLD_DATA_4<-rbind(OLD_DATA_2006,OLD_DATA_2007,OLD_DATA_3))
+(OLD_DATA_DAYS<-rbind(OLD_DATA_DAYS_2006,OLD_DATA_DAYS_2007,OLD_DATA_DAYS))
 
-OLD_DATA_4$Source<-"STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment"
-OLD_DATA_4$GSA<-GSA
-OLD_DATA_4$Month<-0 
-OLD_DATA_4$unit<-"Days"
+(OLD_DATA_DAYS$Source<-"STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment")
+OLD_DATA_DAYS$Month<-0 
+OLD_DATA_DAYS$Unit<-"Days"
 
-(OLD_DATA_4<-OLD_DATA_4[,c(10,3,6,2,11,7,8,9)])
 
-(BIGDF<-rbind(OLD_DATA_4,GSA9_DAY))
-(BIGDF<-BIGDF%>%arrange(year,fishing_tech,vessel_length))
+(OLD_DATA_DAYS<-OLD_DATA_DAYS[,c(1,2,3,4,5,8,9,6,7)])
+(OLD_DATA_DAYS<-OLD_DATA_DAYS%>%unite("FS",C:FF, remove = T, sep = "_"))
+colnames(OLD_DATA_DAYS)[1]<-"country_code"
+colnames(OLD_DATA_DAYS)[2]<-"year"
 
-(BIGDF_DTS<-BIGDF%>%filter(vessel_length%in%LOA1 & fishing_tech%in%FT1))#segment ok
-(BIGDF_PGP<-BIGDF%>%filter(fishing_tech%in%FT2 & vessel_length%in%c("VL0012","VL1218")))
+# duplicate the data frame for the 12 months and after / by 12 for the value by month
+
+data<-list()
+
+for (i in 1:12){
+  data[[i]]<-OLD_DATA_DAYS
+OLD_DATA_DAYS_DUP = do.call(rbind, data)
+}
+
+(OLD_DATA_DAYS_DUP$totseadays_by_month<-OLD_DATA_DAYS_DUP$totseadays/12)
+(OLD_DATA_DAYS_DUP<-OLD_DATA_DAYS_DUP%>%arrange(year,FS))
+OLD_DATA_DAYS_DUP$Month<-c(1:12)
+(OLD_DATA_DAYS_DUP<-OLD_DATA_DAYS_DUP[,c(1,2,3,4,5,8,7)])
+colnames(OLD_DATA_DAYS_DUP)[6]<-"value"
+
+colnames(DATA_DAY)[5]<-"value"
+
+(BIGDF<-rbind(OLD_DATA_DAYS_DUP,DATA_DAY))
+
+(BIGDF<-BIGDF%>%separate(col=FS, into=c("A","B","C"), sep="_"))
+
+
+(BIGDF_DTS<-BIGDF%>%filter(C%in%LOA1 & B%in%FT1))#segment ok
 (BIGDF_DTS$gear<-"OTB")
-(BIGDF_DTS<-BIGDF_DTS[,c(1,2,3,9,4,5,6,7,8)]%>%unite("FS",c(GSA:gear), remove = T))
-(BIGDF_PGP<-BIGDF_PGP%>%unite("FS",c(GSA:vessel_length), remove = T))
+(BIGDF_DTS<-BIGDF_DTS[,c(1,2,3,4,5,10,6,7,8,9)]%>%unite("FS",c(A:gear), remove = T))
+(BIGDF_PGP<-BIGDF%>%filter(B%in%FT2))
+(BIGDF_PGP<-BIGDF_PGP%>%unite("FS",c(A:C), remove = T))
 
 (FINALDFDAY<-rbind(BIGDF_DTS,BIGDF_PGP))
-(FINALDFDAY<-FINALDFDAY%>%arrange(year,FS))
+(FINALDFDAY<-FINALDFDAY[,c(2:7)])
+colnames(FINALDFDAY)[1]<-"Year"
+colnames(FINALDFDAY)[5]<-"Days"
 
-colnames(FINALDFDAY)[2]<-"Year"
-colnames(FINALDFDAY)[4]<-"Days"
-colnames(FINALDFDAY)[5]<-"Unit"
 (FINALDFDAY$Days<-round(as.numeric(FINALDFDAY$Days)))
-
-FINALDFDAY
+(FINALDFDAY<-FINALDFDAY%>%arrange(FS,Year,Month))
 
 # Please add you repository 
-write.table(FINALDFDAY,"D:/Andrea/Desktop/NEW_BEMTool/FINALDFDAY.csv",sep=";",row.names=F)      
+write.table(FINALDFDAY,"D:/Andrea/Desktop/FINALDFDAY.csv",sep=";",row.names=F)      
 
 Fleet_segments<-unique(FINALDFDAY$FS) 
 
-ts<-c(2006:2021)
+ts<-c(2006:2022)
 
-trans_year=c(2021)
+trans_year=c(2022)
 
 # Days
 
@@ -187,7 +335,7 @@ for (rr in 1:nrow(Days_data_temp)){
   if (month!=0){
     DF1[rownames(DF1)==month,colnames(DF1)==year]=Days_data_temp$Days[rr]
   } else if (month==0){
-    DF1[,colnames(DF1)==year]=Days_data_temp$Days[rr]/12
+    DF1[,colnames(DF1)==year]=Days_data_temp$Days[rr] # /12 check here. If your data are not by month add "/12"
   }  
   
 }
@@ -216,7 +364,7 @@ for (fs in Fleet_segments[-1]){
       
     } else if (month==0){
       
-      DF_next[,colnames(DF_next)==year]=Days_data_temp$Days[rr]/12  
+      DF_next[,colnames(DF_next)==year]=Days_data_temp$Days[rr]  
     }  
     
   }
@@ -336,6 +484,6 @@ DF_final= cbind(c(     "casestudy.fleetsegmentcode",
 ),DF_final)
 
 colnames(DF_final)[1]="Units: days"
-write.table(DF_final,"D:/Andrea/Desktop/NEW_BEMTool/TEST_DAYS.csv",sep=";",row.names=F)      
-
+write.table(DF_final,"D:/Andrea/Desktop/NEW_TEST_DAYS.csv",sep=";",row.names=F)      
 ```
+
