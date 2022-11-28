@@ -16,7 +16,8 @@ header-includes:
 # packages requested
 
 rm(list=ls())
-(FINALDF<-read.csv("D:\\Andrea\\Desktop\\revision Bemtool\\metier\\vessels\\FINALDF_VESSEL_metier_17_18_19.csv", sep = ","))
+#NB
+# (FINALDF<-read.csv("D:\\Andrea\\Desktop\\revision Bemtool\\metier\\vessels\\FINALDF_VESSEL_metier_17_18_19.csv", sep = ",")) # Also in this case you need to run the vessel script first and have your vessels DF ready.
 
 library(readxl)
 library(tidyverse)
