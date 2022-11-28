@@ -24,7 +24,8 @@ library(tidyverse)
 rm(list=ls())
 
 # Step 1 #===============================================================================================
-(FINALDF<-read.csv("D:\\Andrea\\Desktop\\revision Bemtool\\metier\\vessels\\FINALDF_VESSEL_metier_17_18_19.csv", sep = ","))
+#  NB
+# (FINALDF<-read.csv("D:\\Andrea\\Desktop\\revision Bemtool\\metier\\vessels\\FINALDF_VESSEL_metier_17_18_19.csv", sep = ",")) # you need to run the vessel script first and have the DF ready before run this script
 
 wd<-"D:/Andrea/Desktop/FISH Stock Assessment/STECF 2022/Effort regime/SET/DATA/FDI"
 (RECENTDATAKW<-read.csv(paste0(wd,"/tableJ_EWG2211.csv"), sep = ";"))
