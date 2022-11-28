@@ -17,19 +17,21 @@ wd<-"D:/Andrea/Desktop/FISH Stock Assessment/STECF 2022/Effort regime/SET/DATA/F
 
 COUNTRY<-"Italy"
 FT1<-"DTS"
-LOA<-c("VL0612" ,"VL1218", "VL1824", "VL2440")
-AREA<-c("GSA9","GSA10")
+LOA1<-c("VL0612" ,"VL1218", "VL1824", "VL2440")
+AREA<-c("GSA17","GSA18","GSA19")
+firstyear<- 2013 # first year of your available FDI data 
 lastyear<- 2021 # define the last available year of your data 
+
 # ===================================== DTS 
 (DATA_2_A<-RECENTDATA2%>% 
     select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.vessels)%>%
-    filter(Country.name%in%COUNTRY &  Fishing.Technique%in% FT1 & Vessel.Length.Category%in%LOA & principal.sub.region%in%AREA))
+    filter(Country.name%in%COUNTRY &  Fishing.Technique%in% FT1 & Vessel.Length.Category%in%LOA1 & principal.sub.region%in%AREA))
 
 # You need to check if you have all the segments in all GSAs and all years 
 
-(Vessel.Length.Category<-rep(rep(unique(DATA_2_A$Vessel.Length.Category),length(AREA)),length(unique(DATA_2_A$year))))
+(Vessel.Length.Category<-rep(rep(unique(DATA_2_A$Vessel.Length.Category),length(AREA)),length(c(firstyear:lastyear))))
 (principal.sub.region<-rep(AREA,each=(length(Vessel.Length.Category)/length(AREA))))
-(year<-rep(rep(unique(DATA_2_A$year),each=(length(unique(DATA_2_A$Vessel.Length.Category)))),length(AREA)))
+(year<-rep(c(firstyear:lastyear),each=(length(unique(DATA_2_A$Vessel.Length.Category))),length(AREA)))
   
 (data_check<-data.frame(year,Vessel.Length.Category,principal.sub.region))
 (data_check$Country.name<-COUNTRY)
@@ -52,11 +54,12 @@ DATA_2_A$gear<-"OTB"
 #==================================== PGP 
 
 FT2<-"PGP"
-LOA<-c("VL0006","VL0612")
+LOA2<-c("VL0006","VL0612")
+LOA3<-c("VL1218")
 
 (DATA_2_B1<-RECENTDATA2%>%
     select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.vessels)%>%
-    filter(Country.name%in%COUNTRY & Fishing.Technique%in%FT2 & Vessel.Length.Category%in%LOA & principal.sub.region%in%AREA)%>%
+    filter(Country.name%in%COUNTRY & Fishing.Technique%in%FT2 & Vessel.Length.Category%in%LOA2 & principal.sub.region%in%AREA)%>%
     group_by(Country.name,year,Fishing.Technique,principal.sub.region)%>%
     summarise(total.vessels=sum(as.numeric(total.vessels))))
 
@@ -65,10 +68,9 @@ DATA_2_B1<-DATA_2_B1[,c(1,2,4,3,6,5)]
 
 # You need to check if you have all the segments in all GSAs and all years 
 
-(Vessel.Length.Category<-rep(rep(unique(DATA_2_B1$Vessel.Length.Category),length(AREA)),length(unique(DATA_2_B1$year))))
+(Vessel.Length.Category<-rep(rep(unique(DATA_2_B1$Vessel.Length.Category),length(AREA)),length(c(firstyear:lastyear))))
 (principal.sub.region<-rep(AREA,each=(length(Vessel.Length.Category)/length(AREA))))
-(year<-rep(rep(unique(DATA_2_B1$year),each=(length(unique(DATA_2_B1$Vessel.Length.Category)))),length(AREA)))
-  
+(year<-rep(rep(c(firstyear:lastyear),each=(length(unique(DATA_2_B1$Vessel.Length.Category)))),length(AREA)))
 (data_check<-data.frame(year,Vessel.Length.Category,principal.sub.region))
 (data_check$Country.name<-COUNTRY)
 (data_check$Fishing.Technique<-FT2)
@@ -83,16 +85,14 @@ DATA_2_B1<-DATA_2_B1[,c(1,2,4,3,6,5)]
 (DATA_2_B1<-DATA_2_B1[,c(1,2)])
 colnames(DATA_2_B1)[2]<-"total.vessels"
 
-LOA<-c("VL1218")
-
 (DATA_2_B2<-RECENTDATA2%>%
     select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.vessels)%>%
-    filter(Country.name%in%COUNTRY &  Fishing.Technique%in%FT2 & Vessel.Length.Category%in%LOA & principal.sub.region%in%AREA))
+    filter(Country.name%in%COUNTRY &  Fishing.Technique%in%FT2 & Vessel.Length.Category%in%LOA3 & principal.sub.region%in%AREA))
 
 # You need to check if you have all the segments in all GSAs and all years 
-(Vessel.Length.Category<-rep(rep(unique(DATA_2_B2$Vessel.Length.Category),length(AREA)),length(unique(DATA_2_B2$year))))
+(Vessel.Length.Category<-rep(rep(unique(DATA_2_B2$Vessel.Length.Category),length(AREA)),length(c(firstyear:lastyear))))
 (principal.sub.region<-rep(AREA,each=(length(Vessel.Length.Category)/length(AREA))))
-(year<-rep(rep(unique(DATA_2_B2$year),each=(length(unique(DATA_2_B2$Vessel.Length.Category)))),length(AREA)))
+(year<-rep(rep(c(firstyear:lastyear),each=(length(unique(DATA_2_B2$Vessel.Length.Category)))),length(AREA)))
   
 (data_check<-data.frame(year,Vessel.Length.Category,principal.sub.region))
 (data_check$Country.name<-COUNTRY)
@@ -145,16 +145,15 @@ CC= "ITA"
 FT1= "DTS"
 FT2= "PGP"
 LOA<-c("VL0612" ,"VL1218", "VL1824", "VL2440")
-yearx<-2013 # indicate the last year of FDI available data at a GSAs level
-
+firstyearSTECF<-2008 # indicate the first available year 
 (OLD_DATA_DTS<-OLD_DATA%>%
     select(country_code,supra_reg,year,fishing_tech,variable_code,vessel_length,variable_code,value,unit)%>%
-    filter(country_code%in%CC, year<yearx & variable_code%in%"totves" & fishing_tech%in%FT1 & supra_reg %in%"AREA37" & vessel_length%in%LOA))
+    filter(country_code%in%CC & year<firstyear & variable_code%in%"totves" & fishing_tech%in%FT1 & supra_reg %in%"AREA37" & vessel_length%in%LOA))
 
 # I need to add a table check also here 
 
-(vessel_length<-rep(unique(OLD_DATA_DTS$vessel_length),length(unique(OLD_DATA_DTS$year))))
-(year<-rep(unique(OLD_DATA_DTS$year),each=(length(unique(OLD_DATA_DTS$vessel_length)))))
+(vessel_length<-rep(unique(OLD_DATA_DTS$vessel_length),length(c(firstyearSTECF:c(firstyear-1)))))
+(year<-rep(sort(c(firstyearSTECF:c(firstyear-1))),each=(length(unique(OLD_DATA_DTS$vessel_length)))))
   
 (data_check<-data.frame(year,vessel_length))
 (data_check$country_code<-CC)
@@ -169,11 +168,9 @@ yearx<-2013 # indicate the last year of FDI available data at a GSAs level
 (OLD_DATA_DTS[is.na(OLD_DATA_DTS)] = 0.00001)
 (OLD_DATA_DTS<-OLD_DATA_DTS[,c(1,2)])
 colnames(OLD_DATA_DTS)[2]<-"total.vessels"
-
 (OLD_DATA_PGP<-OLD_DATA%>%
     select(country_code,supra_reg,year,fishing_tech,variable_code,vessel_length,value,unit)%>%
-    filter(country_code%in%CC,  year<yearx & variable_code%in%"totves" & fishing_tech%in%FT2 & supra_reg %in%"AREA37" & vessel_length%in%c("VL0006","VL0612" ,"VL1218")))
-
+    filter(country_code%in%CC &  year<firstyear & variable_code%in%"totves" & fishing_tech%in%FT2 & supra_reg %in%"AREA37" & vessel_length%in%c("VL0006","VL0612" ,"VL1218")))
 
 (OLD_DATA_PGP$vessel_length[OLD_DATA_PGP$vessel_length%in%c("VL0006","VL0612")]<-"VL0012")
 (OLD_DATA_PGP<-OLD_DATA_PGP%>%
@@ -181,8 +178,8 @@ colnames(OLD_DATA_DTS)[2]<-"total.vessels"
     summarise(value=sum(value)))
 # check if all the fleet segment are available in all year or there are some missing data.
 
-(vessel_length<-rep(unique(OLD_DATA_PGP$vessel_length),length(unique(OLD_DATA_PGP$year))))
-(year<-rep(unique(OLD_DATA_PGP$year),each=(length(unique(OLD_DATA_PGP$vessel_length)))))
+(vessel_length<-rep(unique(OLD_DATA_PGP$vessel_length),length(c(firstyearSTECF:c(firstyear-1)))))
+(year<-rep(c(firstyearSTECF:c(firstyear-1)),each=(length(unique(OLD_DATA_PGP$vessel_length)))))
   
 (data_check<-data.frame(year,vessel_length))
 (data_check$country_code<-CC)
@@ -193,14 +190,12 @@ colnames(OLD_DATA_DTS)[2]<-"total.vessels"
 (OLD_DATA_PGP<-OLD_DATA_PGP[,c(1,3,4,6,8)]%>%unite("FS",country_code:vessel_length, remove = T, sep = "_"))
 (data_check<-data_check[,c(3,1,4,2,5)]%>%unite("FS",country_code:vessel_length, remove = T, sep = "_"))
 
-
 (OLD_DATA_PGP<-merge(OLD_DATA_PGP,data_check,  by.x ="FS", by.y="FS", all.x = F, all.y = T))
 (OLD_DATA_PGP[is.na(OLD_DATA_PGP)] = 0.00001)
 (OLD_DATA_PGP<-OLD_DATA_PGP[,c(1,2)])
 colnames(OLD_DATA_PGP)[2]<-"total.vessels"
 
 (OLD_DATA<-rbind(OLD_DATA_DTS,OLD_DATA_PGP))
-
 
 # This is the old data i need
 (OLD_DATA<-separate(OLD_DATA, col=FS, into=c("A","B","C","D"), sep="_"))
@@ -222,14 +217,14 @@ LOA1<-c("VL1218", "VL0612", "VL1824", "VL2440")
 # ======= DTS ==================
 (GSAITA_TOT_RECENTDATA_DTS<-RECENTDATA2%>%
     select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.vessels)%>%
-    filter(Country.name%in%COUNTRY & year%in%yearx & Fishing.Technique%in%FT1 & Vessel.Length.Category%in%LOA1 & principal.sub.region%in%allGSAs))
+    filter(Country.name%in%COUNTRY & year%in%firstyear & Fishing.Technique%in%FT1 & Vessel.Length.Category%in%LOA1 & principal.sub.region%in%allGSAs))
 # ======= PGP ==================
 
 LOA2<-c("VL0006","VL0612","VL1218")
 
 (GSAITA_TOT_RECENTDATA_PGP1<-RECENTDATA2%>%
     select(Country.name,year,Vessel.Length.Category,Fishing.Technique,principal.sub.region,total.vessels)%>%
-    filter(Country.name%in%COUNTRY & year%in%yearx & Fishing.Technique%in%FT2 & Vessel.Length.Category%in%LOA2 & principal.sub.region%in%allGSAs))
+    filter(Country.name%in%COUNTRY & year%in%firstyear & Fishing.Technique%in%FT2 & Vessel.Length.Category%in%LOA2 & principal.sub.region%in%allGSAs))
 
 (GSAITA_TOT_RECENTDATA_PGP1$Vessel.Length.Category[GSAITA_TOT_RECENTDATA_PGP1$Vessel.Length.Category%in%c("VL0006","VL0612")]<-"VL0012")
 
@@ -242,22 +237,20 @@ LOA2<-c("VL0006","VL0612","VL1218")
 
 (total<-sum(GSAITA_TOT_RECENTDATA2$total.vessels))
 
-
 (GSAITA_TOT_RECENT_2014_DTS<-GSAITA_TOT_RECENTDATA2%>%
-    filter(year %in%yearx & Fishing.Technique%in%FT1)%>%
+    filter(year %in%firstyear & Fishing.Technique%in%FT1)%>%
     group_by(Country.name,year ,Fishing.Technique,Vessel.Length.Category)%>%
     summarise(total.vessels=sum(as.numeric(total.vessels))))
 
 (GSAITA_TOT_RECENT_2014_PGP<-GSAITA_TOT_RECENTDATA2%>%
-    filter(year%in%yearx  & Fishing.Technique%in%FT2)%>%
+    filter(year%in%firstyear  & Fishing.Technique%in%FT2)%>%
     group_by(Country.name,year ,Fishing.Technique,Vessel.Length.Category)%>%
     summarise(total.vessels=sum(as.numeric(total.vessels))))
 
 (GSAITA_TOT_RECENT_2014<-rbind(GSAITA_TOT_RECENT_2014_DTS,GSAITA_TOT_RECENT_2014_PGP))
-
 # NOw it is time to calculate the % of the oldest available year. 
 
-(DATA_3<-DATA_2%>%filter(Year%in%yearx))
+(DATA_3<-DATA_2%>%filter(Year%in%firstyear))
 (DATA_3$nationa_total<-total)
 (DATA_3$PROP<-DATA_3$total.vessels/DATA_3$nationa_total)
 
@@ -283,6 +276,7 @@ OLD_DATA_3 = do.call(rbind, data)
 (OLD_DATA_3<-OLD_DATA_3%>%arrange(year))
 
 (OLD_DATA_FULL<-cbind(OLD_DATA_3,PROP_DATA_3))
+
 (OLD_DATA_FULL$true_value<-OLD_DATA_FULL$nationa_total*OLD_DATA_FULL$PROP)
 
 (OLD_DATA_FULL<-OLD_DATA_FULL[,c(1,2,8,10,11,15)])
@@ -292,26 +286,45 @@ OLD_DATA_3 = do.call(rbind, data)
 OLD_DATA_FULL$Source<-"STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment"
 colnames(OLD_DATA_FULL)[6]<-"value"
 
-# now you need to create the absent 2006 and 2007 data equal to 2008 
-(OLD_DATA_2006<-OLD_DATA_FULL%>%filter(year%in%"2008"))
-OLD_DATA_2006[,2]<-"2006"
+(OLD_DATA_2006<-OLD_DATA_FULL%>%filter(year%in%firstyearSTECF))
 
-(OLD_DATA_2007<-OLD_DATA_FULL%>%filter(year%in%"2008"))
-OLD_DATA_2007[,2]<-"2007"
+# You need to check if you have all the segments in all GSAs and all years 
+(vessel_length<-unique(DATA_2$Fleet_segments))
+(year<-rep(firstyearSTECF,length(vessel_length)))
+  
+(data_check<-data.frame(year,vessel_length))
+(data_check$country_code<-CC)
+(data_check$Month<-0)
+(data_check$Unit<-"vess")
+(data_check$value<-0)
+(data_check$Source<-"STECF_21-08_EU_Fleet_Economic_and_Transversal_data_fleet_segment")
+colnames(data_check)[2]<-"Fleet_segments"
 
-# merge all the old data set 
+# now you merge the two data frame and you have all fleet segments for all GSAs in all year. The missing fleet segment have been replaced with 0s.
+
+(OLD_DATA_2006<-merge(OLD_DATA_2006,data_check,  by.x ="Fleet_segments", by.y="Fleet_segments", all.x = F, all.y = T))
+(OLD_DATA_2006[is.na(OLD_DATA_2006)] = 0.00001)
+(OLD_DATA_2006<-OLD_DATA_2006[,c(1,6,8:11,13)])
+
+colnames(OLD_DATA_2006)[4]<-"country_code"
+colnames(OLD_DATA_2006)[3]<-"year"
+colnames(OLD_DATA_2006)[5]<-"Month"
+colnames(OLD_DATA_2006)[6]<-"Unit"
+colnames(OLD_DATA_2006)[2]<-"value"
+colnames(OLD_DATA_2006)[7]<-"Source"
+OLD_DATA_2006$year<-"2006"
+OLD_DATA_2007<-OLD_DATA_2006
+OLD_DATA_2007$year<-"2007"
 (OLD_DATA_FULL<-rbind(OLD_DATA_2006,OLD_DATA_2007,OLD_DATA_FULL))
 
-
-
-colnames(OLD_DATA_FULL)[2]<-"Year"
+colnames(OLD_DATA_FULL)[3]<-"Year"
 
 colnames(DATA_2)[1]<-"country_code"
 colnames(DATA_2)[4]<-"value"
 (BIGDF<-rbind(OLD_DATA_FULL,DATA_2))
-BIGDF<-BIGDF[,c(3,2,4,5,6,7)]
-colnames(BIGDF)[1]<-"FS"
-colnames(BIGDF)[5]<-"Vess"
+(BIGDF<-BIGDF[,c(4,3,1,2,5,6,7)])
+colnames(BIGDF)[3]<-"FS"
+colnames(BIGDF)[4]<-"Vess"
 
 # add the current year of the assessment assuming current year = to the last availabel year 
 
@@ -320,40 +333,44 @@ colnames(BIGDF)[5]<-"Vess"
 BIGDF_lastyear[,2]<-currentyear
 (BIGDF<-rbind(BIGDF,BIGDF_lastyear))
 
-
 ################################## 4 ####################
 # For some fleet segments ("VL1218", "VL1824", "VL2440") you need to duplicate vessels for the three metiers DEF, DWS and MDD
 (BIGDF_1<-separate(BIGDF, col=FS, into=c("A","B","C","D"), sep="_"))
 (BIGDFDUP<-BIGDF_1%>%filter(C!="VL0612" & B!=FT2)) #segment to be duplicated
+
 (BIGDFNODUP_DTS<-BIGDF_1%>%filter(C%in%"VL0612" & B%in%FT1))#segment ok
-(BIGDFNODUP_PGP<-BIGDF_1[,c(1:3,5:9)]%>%filter(C%in%c("VL0012","VL1218") & B%in%FT2))
+
+(BIGDFNODUP_PGP<-BIGDF_1[c(1:5,7:10)]%>%filter(C%in%c("VL0012","VL1218") & B%in%FT2))
+
 (BIGDFDUP_DEF<-BIGDFDUP_DWS<-BIGDFDUP_MDD<-BIGDFDUP)
 (BIGDFDUP_DEF$Metier<-"DEF")
 (BIGDFDUP_DWS$Metier<-"DWS")
 (BIGDFDUP_MDD$Metier<-"MDD")
 (BIGDFDUPLICATED<-rbind(BIGDFDUP_DEF,BIGDFDUP_DWS,BIGDFDUP_MDD)) # I duplicate the line of the three vessels lenght for the three metiers
 BIGDFNODUP_DTS$Metier<-"DEF"
-(BIGDFNODUP_DTS<-BIGDFNODUP_DTS[,c(1,2,3,4,10,5,6,7,8,9)])
-(BIGDFDUPLICATED<-BIGDFDUPLICATED[,c(1,2,3,4,10,5,6,7,8,9)])
+
+(BIGDFNODUP_DTS<-BIGDFNODUP_DTS[,c(1,2,3,4,5,6,11,7,8,9,10)])
+(BIGDFDUPLICATED<-BIGDFDUPLICATED[,c(1,2,3,4,5,6,11,7,8,9,10)])
 (BIGDFNODUP_DTS<-BIGDFNODUP_DTS%>%unite("FS",c(A:Metier), remove = T))
 (BIGDFDUPLICATED<-BIGDFDUPLICATED%>%unite("FS",c(A:Metier), remove = T))
 (BIGDFNODUP_PGP<-BIGDFNODUP_PGP%>%unite("FS",c(A:C), remove = T))
 (FINALDF<-rbind(BIGDFNODUP_DTS,BIGDFDUPLICATED,BIGDFNODUP_PGP))
 (FINALDF<-FINALDF%>%arrange(Year,FS))
 
+
 FINALDF$Vess<-round(FINALDF$Vess)
 FINALDF
 # this line below is only for a specific case study comment it 
 (FINALDF<-FINALDF%>%filter(FS!="GSA9_DTS_VL2440_OTB_DWS"))
-write.csv(FINALDF,"D:/Andrea/Desktop/NEW_BEMTool/FINALDF_VESSEL_metier_new.csv",row.names=F) 
+write.csv(FINALDF,"D:/Andrea/Desktop/FINALDF_VESSEL_metier_17_18_19.csv",row.names=F) 
 FINALDF # ATTENTION: you will use this Data frame for some calculation below, do not delete it from your global environment. 
 
 #################################### 5 #############################################################
 # run the loop and create the Bemtool input csv file
 # In this last step you have your data frame and you just need to run the loop for creating the Bemtool input csv file
 
-ts<-c(2006:currentyear)
-trans_year=c(currentyear)
+ts<-c(2006:c(lastyear+1))
+trans_year=c(lastyear+1)
 
 #VESSELS
 (Vess_data=FINALDF)
@@ -438,7 +455,6 @@ for (fs in Fleet_segments[-1]){
 empty_row=t(data.frame(rep("",length(SecondRow))))
 
 DF_final=(rbind(SecondRow,empty_row,empty_row))
-
 DF_final=rbind(DF_final,as.matrix(DF1))
 
 DF_final= cbind(c(   "casestudy.fleetsegmentcode",
@@ -459,5 +475,5 @@ DF_final= cbind(c(   "casestudy.fleetsegmentcode",
 
 colnames(DF_final)[1]="Units: number"
 
-write.table(DF_final,"D:/Andrea/Desktop/NEW_BEMTool/number-of-vessels_metier_new.csv",row.names=F) 
+write.csv2(DF_final,"D:/Andrea/Desktop/number-of-vessels_metier_17_18_19.csv",row.names=F) 
 ```
