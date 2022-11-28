@@ -520,5 +520,5 @@ DF_final= cbind(c(     "casestudy.fleetsegmentcode",
 ),DF_final)
 
 colnames(DF_final)[1]="Units: days"
-write.table(DF_final,"D:/Andrea/Desktop/NEW_TEST_DAYS_17_18_19.csv",sep=";",row.names=F) 
+write.table(DF_final,"D:/Andrea/Desktop/NEW_TEST_DAYS_17_18_19.csv",sep=";",row.names=F)  
 ```
